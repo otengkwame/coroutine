@@ -4,29 +4,10 @@ namespace Async;
 
 use Async\Spawn\Channeled;
 use Async\Spawn\FutureInterface;
+use Async\Spawn\ParallelInterface as SpawnerInterface;
 
-interface ParallelInterface
+interface ParallelInterface extends SpawnerInterface
 {
-  public function concurrency(int $concurrency): ParallelInterface;
-
-  public function sleepTime(int $sleepTime);
-
-  public function results(): array;
-
-  public function isPcntl(): bool;
-
-  public function status(): ParallelStatus;
-
-  /**
-   * Reset all sub `future` data, and kill any running.
-   */
-  public function close();
-
-  /**
-   * Kill all running `Future's`.
-   */
-  public function kill();
-
   /**
    * Create an `yield`able Future `sub/child` **task**, that can include an additional **file**.
    * This function exists to give same behavior as **parallel\runtime** of `ext-parallel` extension,
@@ -43,19 +24,6 @@ interface ParallelInterface
   public function adding(?\closure $future = null, ?string $include = null, ...$args): FutureInterface;
 
   /**
-   * @param Future|callable $future
-   * @param int|float|null $timeout The timeout in seconds or null to disable
-   * @param Channeled|resource|mixed|null $channel IPC/CSP communication to be pass to the underlying `Future` instance.
-   *
-   * @return FutureInterface
-   */
-  public function add($future, int $timeout = 0, $channel = null): FutureInterface;
-
-  public function retry(FutureInterface $future = null): FutureInterface;
-
-  public function wait(): array;
-
-  /**
    * Try to cancel the Future.
    *
    * @param FutureInterface $future
@@ -70,25 +38,4 @@ interface ParallelInterface
    * @return void
    */
   public function tick(FutureInterface $future);
-
-  /**
-   * @return FutureInterface[]
-   */
-  public function getQueue(): array;
-
-  public function markAsSignaled(FutureInterface $future);
-
-  public function markAsFinished(FutureInterface $future);
-
-  public function markAsTimedOut(FutureInterface $future);
-
-  public function markAsFailed(FutureInterface $future);
-
-  public function getFinished(): array;
-
-  public function getFailed(): array;
-
-  public function getTimeouts(): array;
-
-  public function getSignaled(): array;
 }

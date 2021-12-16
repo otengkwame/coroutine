@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace parallel;
 
+use Async\Co;
+use Async\Spawn\Globals;
 use parallel\Runtime;
 use parallel\FutureInterface;
 use parallel\Runtime\Error\Bootstrap;
@@ -31,11 +33,10 @@ if (!\function_exists('functional_api')) {
    */
   function run(\closure $task, ...$argv): ?FutureInterface
   {
-    global $___bootstrap___, $___run___;
-
     try {
-      $___run___ = new Runtime($___bootstrap___);
-      return $___run___->run($task, ...$argv);
+      $parallel = new Runtime((Co::has('bootstrap') ? Co::get('bootstrap') : null));
+      Co::set('run', $parallel);
+      return $parallel->run($task, ...$argv);
     } catch (\Throwable $e) {
       throw new IllegalVariable('illegal variable');
     }
@@ -50,14 +51,13 @@ if (!\function_exists('functional_api')) {
    */
   function bootstrap(?string $file = null)
   {
-    global $___bootstrap___, $___run___, $___channeled___;
-    if ($___run___ !== null || $___channeled___ === 'parallel')
+    if (Co::has('run') || Globals::isChannelling())
       throw new Bootstrap('\parallel\bootstrap should be called once, before any calls to \parallel\run');
 
-    if (isset($___bootstrap___))
-      throw new Bootstrap(\sprintf('\parallel\bootstrap already set to %s', $___bootstrap___));
+    if (Co::has('bootstrap'))
+      throw new Bootstrap(\sprintf('\parallel\bootstrap already set to %s', Co::get('bootstrap')));
 
-    $___bootstrap___ = $file;
+    Co::set('bootstrap', $file);
   }
 
   /**

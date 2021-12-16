@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<phpunit bootstrap="vendor/autoload.php"
-    backupGlobals="false"
-    backupStaticAttributes="false"
-    convertErrorsToExceptions="true"
-    convertNoticesToExceptions="true"
-    convertWarningsToExceptions="true"
-    processIsolation="false"
-    stopOnFailure="false"
-    colors="true">
+<phpunit bootstrap="vendor/autoload.php" backupGlobals="false" backupStaticAttributes="false" convertErrorsToExceptions="true" convertNoticesToExceptions="true" convertWarningsToExceptions="true" processIsolation="false" stopOnFailure="false" colors="true">
 
     <testsuites>
         <testsuite name="Coroutine Test Suite">
@@ -22,11 +14,6 @@
     <filter>
         <whitelist>
             <directory suffix=".php">Coroutine/</directory>
-            <exclude>
-                <file>./Coroutine/UV.php</file>
-                <file>./Coroutine/UVFunctions.php</file>
-                <file>./Coroutine/UVHandles.php</file>
-            </exclude>
         </whitelist>
     </filter>
 

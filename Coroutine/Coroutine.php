@@ -8,13 +8,13 @@ use function Async\Path\file_operation;
 use function Async\Stream\net_operation;
 
 use Async\Spawn\Future;
+use Async\Spawn\FutureHandler;
 use Async\Spawn\FutureInterface;
 use Async\Spawn\ChanneledInterface;
 use Async\Kernel;
 use Async\Task;
 use Async\Parallel;
 use Async\ParallelInterface;
-use Async\FutureHandler;
 use Async\Signaler;
 use Async\TaskInterface;
 use Async\ReturnValueCoroutine;
@@ -49,21 +49,21 @@ final class Coroutine implements CoroutineInterface
   /**
    * List of currently running tasks
    *
-   * @var array[] taskId => task
+   * @var array[] [taskId => task]
    */
   protected $taskMap = [];
 
   /**
    * List of completed tasks
    *
-   * @var array
+   * @var TaskInterface[]|FiberInterface[]
    */
   protected $completedMap = [];
 
   /**
    * Queue of `Task`, holding all created `coroutines/generators`
    *
-   * @var \SplQueue
+   * @var \SplQueue<TaskInterface|FiberInterface|\Generator>
    */
   protected $taskQueue;
 
@@ -251,11 +251,8 @@ final class Coroutine implements CoroutineInterface
    */
   public function __construct()
   {
-    global $__coroutine__, $__timer__, $___bootstrap___, $___run___, $___future___, $___paralleling;
-    // For getting `ext-parallel` behavior
-    $___future___ = $___bootstrap___ = $___run___ = $___paralleling = null;
-
-    $__coroutine__ = $this;
+    Co::clear();
+    Co::setLoop($this);
     $this->initSignals();
 
     if (\IS_UV) {
@@ -301,8 +298,11 @@ final class Coroutine implements CoroutineInterface
       };
     }
 
-    $this->isHighTimer = $__timer__['hrtime'] = \function_exists('hrtime');
+    if ($this->isHighTimer = \function_exists('hrtime'))
+      Co::setTiming('hrtime', true);
+
     $this->parallel = new Parallel($this);
+    $this->future = $this->parallel->getFutureHandler();
     $this->taskQueue = new \SplQueue();
   }
 
@@ -457,26 +457,11 @@ final class Coroutine implements CoroutineInterface
     return $this->parallel;
   }
 
-  public function getFutureHandler(
-    ?callable $timedOutCallback = null,
-    ?callable $finishCallback = null,
-    ?callable $failCallback = null,
-    ?callable $signalCallback  = null
-  ): FutureHandler {
-    if (!empty($this->future)) {
-      $this->future->stopAll();
-      $this->future = null;
-    }
-
-    $this->future = new FutureHandler($this, $timedOutCallback, $finishCallback, $failCallback, $signalCallback);
-    return $this->future;
-  }
-
   public function addFuture($callable, int $timeout = 0, bool $display = false, $channel = null): FutureInterface
   {
-    $Future = $this->parallel->add($callable, $timeout, $channel);
+    $future = $this->parallel->add($callable, $timeout, $channel);
 
-    return $display ? $Future->displayOn() : $Future;
+    return $display ? $future->displayOn() : $future;
   }
 
   public function isUv(): bool
@@ -760,58 +745,58 @@ final class Coroutine implements CoroutineInterface
   {
     while (!$this->taskQueue->isEmpty()) {
       $task = $this->taskQueue->dequeue();
-      if ($this->isFiber($task)) {
+      if ($task instanceof FiberInterface) {
         $this->executeFiber($task);
         continue;
-      }
+      } elseif ($task instanceof TaskInterface) {
+        $task->setState('running');
+        $task->cyclesAdd();
+        $value = $task->run();
 
-      $task->setState('running');
-      $task->cyclesAdd();
-      $value = $task->run();
+        if ($value instanceof Kernel) {
+          try {
+            $value($task, $this);
+          } catch (\Throwable $error) {
+            $task->setState(
+              ($error instanceof CancelledError ? 'cancelled' : 'erred')
+            );
 
-      if ($value instanceof Kernel) {
-        try {
-          $value($task, $this);
-        } catch (\Throwable $error) {
-          $task->setState(
-            ($error instanceof CancelledError ? 'cancelled' : 'erred')
-          );
+            $task->setException($error);
+            $this->schedule($task);
+          }
 
-          $task->setException($error);
+          continue;
+        }
+
+        if ($task->isFinished()) {
+          $this->cancelProgress($task);
+          $id = $task->taskId();
+          if ($task->isNetwork()) {
+            $task->close();
+          } else {
+            $task->setState('completed');
+            $this->completedMap[$id] = $task;
+          }
+
+          unset($this->taskMap[$id]);
+        } else {
+          $task->setState('rescheduled');
           $this->schedule($task);
         }
 
-        continue;
-      }
+        if ($isReturn) {
+          if ($isReturn === 'signaling') {
+            return $this->ioWaiting();
+          } elseif ($isReturn === 'channeling') {
+            $this->ioWaiting();
+            if (!$this->future->isEmpty())
+              continue;
+          } elseif ($isReturn === 'future') {
+            $this->ioWaiting();
+          }
 
-      if ($task->isFinished()) {
-        $this->cancelProgress($task);
-        $id = $task->taskId();
-        if ($task->isNetwork()) {
-          $task->close();
-        } else {
-          $task->setState('completed');
-          $this->completedMap[$id] = $task;
+          return;
         }
-
-        unset($this->taskMap[$id]);
-      } else {
-        $task->setState('rescheduled');
-        $this->schedule($task);
-      }
-
-      if ($isReturn) {
-        if ($isReturn === 'signaling') {
-          return $this->ioWaiting();
-        } elseif ($isReturn === 'channeling') {
-          $this->ioWaiting();
-          if (!$this->future->isEmpty())
-            continue;
-        } elseif ($isReturn === 'future') {
-          $this->ioWaiting();
-        }
-
-        return;
       }
     }
   }

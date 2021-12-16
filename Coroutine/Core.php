@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Async\Defer;
 use Async\Kernel;
 use Async\Channel;
+use Async\Co;
 use Async\Coroutine;
 use Async\CoroutineInterface;
 use Async\Exceptions\Panic;
@@ -33,24 +34,20 @@ if (!\function_exists('coroutine_run')) {
    * - A reference point used to set, to get the difference between the results of consecutive calls.
    * - Will be cleared/unset on the next consecutive call.
    *
-   * @return float|void
+   * @return float|null
    *
    * @see https://docs.python.org/3/library/time.html#time.perf_counter
    * @see https://nodejs.org/docs/latest-v11.x/api/console.html#console_console_time_label
    */
   function timer_for(string $tag = 'perf_counter')
   {
-    global $__timer__;
-    if (isset($__timer__[$tag])) {
-      $perf_counter = $__timer__[$tag];
-      $__timer__[$tag] = null;
-      unset($GLOBALS['__timer__'][$tag]);
-      return (float) ($__timer__['hrtime']
-        ? (\hrtime(true) / 1e+9) - $perf_counter
-        : \microtime(true) - $perf_counter);
+    if (Co::hasTiming($tag)) {
+      $perf_counter = Co::getTiming($tag);
+      Co::clearTiming($tag);
+      return (float) (Co::hasTiming('hrtime') ? (\hrtime(true) / 1e+9) - $perf_counter : \microtime(true) - $perf_counter);
     }
 
-    $__timer__[$tag] = (float) ($__timer__['hrtime'] ? \hrtime(true) / 1e+9 : \microtime(true));
+    Co::setTiming($tag, (float) (Co::hasTiming('hrtime') ? \hrtime(true) / 1e+9 : \microtime(true)));
   }
 
   /**
@@ -407,20 +404,17 @@ if (!\function_exists('coroutine_run')) {
 
   function coroutine_instance(): ?CoroutineInterface
   {
-    global $__coroutine__;
-
-    return $__coroutine__;
+    return Co::getLoop();
   }
 
   function coroutine_clear()
   {
-    global $__coroutine__, $__timer__, $___bootstrap___, $___run___;
-    if ($__coroutine__ instanceof CoroutineInterface) {
-      $__coroutine__->setup(false);
-      unset($GLOBALS['__coroutine__']);
+    $coroutine = Co::getLoop();
+    if ($coroutine instanceof CoroutineInterface) {
+      $coroutine->setup(false);
     }
 
-    $__coroutine__ = $__timer__ = $___bootstrap___ = $___run___ = null;
+    Co::clear();
   }
 
   function coroutine_create(\Generator $routine = null)

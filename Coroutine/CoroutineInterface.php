@@ -2,7 +2,6 @@
 
 namespace Async;
 
-use Async\FutureHandler;
 use Async\TaskInterface;
 use Async\ParallelInterface;
 use Async\FiberInterface;
@@ -310,21 +309,6 @@ interface CoroutineInterface
    * @return CoroutineInterface
    */
   public function setup(bool $useUvLoop = true): CoroutineInterface;
-
-  /**
-   * Kill and return an new `Future` process `event` manager handle.
-   *
-   * @param callable|null $timedOutCallback
-   * @param callable|null $finishCallback
-   * @param callable|null $failCallback
-   * @return FutureHandler
-   */
-  public function getFutureHandler(
-    ?callable $timedOutCallback = null,
-    ?callable $finishCallback = null,
-    ?callable $failCallback = null,
-    ?callable $signalCallback  = null
-  ): FutureHandler;
 
   /**
    * The `Parallel` class pool future instance.
