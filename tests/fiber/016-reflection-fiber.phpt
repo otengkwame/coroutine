@@ -1,5 +1,7 @@
 --TEST--
 ReflectionFiber basic tests
+--SKIPIF--
+<?php if (!((float) \phpversion() >= 8.1)) print "skip"; ?>
 --FILE--
 <?php
 
