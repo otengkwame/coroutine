@@ -15,5 +15,4 @@ try {
 }
 ?>
 --EXPECTF--
-%S
 string(%d) "illegal function type (internal)"

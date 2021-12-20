@@ -167,7 +167,7 @@ class KernelTest extends TestCase
 
     public function already($value = 0)
     {
-        return \value($value);
+        return \value($value, false);
     }
 
     public function taskGatherAlreadyCompleted()
@@ -178,7 +178,7 @@ class KernelTest extends TestCase
         });
 
         \async('alreadyLabel', function ($value = 0) {
-            return \value($value);
+            return \value($value, false);
         });
 
         $two = yield \away($this->already(2));
@@ -227,7 +227,7 @@ class KernelTest extends TestCase
     public function taskSleepFor()
     {
         \timer_for('true');
-        $done = yield Kernel::sleepFor(\random_uniform(1, 1), 'done sleeping');
+        $done = yield \sleep_for(\random_uniform(1, 1), 'done sleeping');
         $t1 = \timer_for('true');
         $this->assertEquals('done sleeping', $done);
         $this->assertGreaterThan(.9, $t1);
@@ -360,5 +360,80 @@ class KernelTest extends TestCase
     public function testInputAndGather()
     {
         \coroutine_run($this->taskInput());
+    }
+
+    public function taskAsyncPanickingSame()
+    {
+        $this->expectException(Panicking::class);
+        \async('childTask', function ($av = null) {
+        });
+
+        \async('childTask', function ($av = null) {
+        });
+
+        yield \shutdown();
+    }
+
+    public function testAsyncPanickingSame()
+    {
+        \coroutine_run($this->taskAsyncPanickingSame());
+    }
+
+    public function taskAwaitPanickingMissing()
+    {
+        $this->expectException(Panicking::class);
+        yield \await('childTask', 1);
+
+        yield \shutdown();
+    }
+
+    public function testAwaitPanickingMissing()
+    {
+        \coroutine_run($this->taskAwaitPanickingMissing());
+    }
+
+    public function taskAwait()
+    {
+        $this->counterResult = null;
+
+        \async('already', function ($value) {
+            yield;
+            return "received: " . $value;
+        });
+
+        \async('repeat', function (int $stop) {
+            $counter = 0;
+            while (true) {
+                $counter++;
+                if ($counter == $stop) {
+                    $result = yield \await('already', $stop);
+                    break;
+                }
+                yield;
+            }
+
+            return $result;
+        });
+
+        $toCancel = yield \away(function () {
+            $this->counterResult = 0;
+            while (true) {
+                $this->counterResult++;
+                yield;
+            }
+        });
+
+        $value = yield \await('repeat', 6);
+        yield \cancel_task($toCancel);
+
+        $this->assertGreaterThanOrEqual(7, $this->counterResult);
+        $this->assertEquals('received: 6', $value);
+
+        yield \shutdown();
+    }
+
+    public function testAwait()
+    {
+        \coroutine_run($this->taskAwait());
     }
 }

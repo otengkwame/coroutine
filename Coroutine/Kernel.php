@@ -14,7 +14,7 @@ use Async\Exceptions\InvalidStateError;
 use Async\Exceptions\InvalidArgumentException;
 use Async\Exceptions\TimeoutError;
 use Async\Exceptions\CancelledError;
-use Async\Spawn\ChanneledInterface;
+use Async\Exceptions\Panic;
 use Async\FiberInterface;
 
 /**
@@ -984,20 +984,44 @@ final class Kernel
   }
 
   /**
-   * Makes an resolvable function from label name that's callable with `away`
-   * The passed in `function/callable/task` is wrapped to be `awaitAble`
+   * Makes an resolvable function from `label` name that's callable with `await` and `away`.
+   * The passed in `function` is wrapped to be `awaitAble`.
    *
-   * This will create closure function in global namespace with supplied name as variable
+   * - This will store a closure in `Co` static class with supplied `label` name as key.
+   * @see https://docs.python.org/3.7/reference/compound_stmts.html#async-def
    *
-   * @param string $labelFunction
-   * @param Generator|callable $asyncFunction
+   * @param string $label
+   * @param callable $function
+   * @throws Panic — if the **named** `label` function already exists.
    */
-  public static function async(string $labelFunction, callable $asyncFunction)
+  public static function async(string $label, callable $function): void
   {
-    $GLOBALS[$labelFunction] = function (...$args) use ($asyncFunction) {
-      $return = yield $asyncFunction(...$args);
-      return Coroutine::plain($return);
+    $closure = function (...$args) use ($function) {
+      return yield $function(...$args);;
     };
+
+    Co::addFunction($label, $closure);
+  }
+
+  /**
+   * This function will `pause` and execute the `label` function, with `arguments`.
+   * Only functions created with `async` will work, anything else will throw `Panic` exception.
+   *
+   * - This function needs to be prefixed with `yield`
+   * @see https://docs.python.org/3.7/reference/expressions.html#await
+   *
+   * @param string $label
+   * @param mixed ...$arguments
+   * @return mixed
+   * @throws Panic if the **named** `label` function does not exists.
+   */
+  public static function await(string $label, ...$arguments)
+  {
+    if (Co::isFunction($label)) {
+      return yield Co::getFunction($label)(...$arguments);
+    }
+
+    \panic("No function named: '{$label}' exists!");
   }
 
   /**
@@ -1006,27 +1030,21 @@ final class Kernel
    *
    * @see https://docs.python.org/3.7/library/asyncio-task.html#asyncio.create_task
    *
-   * @param Generator|callable $asyncLabel
-   * @param mixed ...$args - if **$asyncLabel** is `Generator`, $args can hold `customState`, and `customData`
+   * @param Generator|callable|string $label
+   * @param mixed ...$args - if **$label** is `Generator`, $args can hold `customState`, and `customData`
    * - for third party code integration.
    *
    * @return int $task id
    */
-  public static function away($asyncLabel, ...$args)
+  public static function away($label, ...$args)
   {
-    $isLabel = false;
-    if (!\is_array($asyncLabel) && !\is_callable($asyncLabel) && !$asyncLabel instanceof \Generator) {
-      global ${$asyncLabel};
-      $isLabel = isset(${$asyncLabel});
-    }
-
-    if ($isLabel && (${$asyncLabel}() instanceof \Generator)) {
-      return Kernel::createTask(${$asyncLabel}(...$args));
+    if (\is_string($label) && Co::isFunction($label)) {
+      return Kernel::createTask(Co::getFunction($label)(...$args));
     } else {
       return new Kernel(
-        function ($task, CoroutineInterface $coroutine) use ($asyncLabel, $args) {
-          if ($asyncLabel instanceof \Generator) {
-            $tid = $coroutine->createTask($asyncLabel);
+        function ($task, CoroutineInterface $coroutine) use ($label, $args) {
+          if ($label instanceof \Generator) {
+            $tid = $coroutine->createTask($label);
             if (!empty($args)) {
               $createdTask = $coroutine->taskInstance($tid);
               if (($args[0] === 'true') || ($args[0] === true))
@@ -1041,7 +1059,7 @@ final class Kernel
 
             $task->sendValue($tid);
           } else {
-            $task->sendValue($coroutine->createTask(\awaitAble($asyncLabel, ...$args)));
+            $task->sendValue($coroutine->createTask(\awaitAble($label, ...$args)));
           }
 
           $coroutine->isFiber($task)

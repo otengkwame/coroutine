@@ -1,9 +1,8 @@
 <?php
 include 'vendor/autoload.php';
 
-// will create closure function in global namespace with supplied name as variable
-\async('childTask', function ($av = null)
-{
+// will create closure function in `Co` static class namespace with supplied name as key
+\async('childTask', function ($av = null) {
     $tid = yield \get_task();
     while (true) {
         echo "Child task $tid still alive! $av\n";
@@ -13,12 +12,9 @@ include 'vendor/autoload.php';
 
 function parentTask()
 {
-    // place the variable global name in local namespace
-    global $childTask;
-
     $tid = yield \get_task();
-    // have `await` access the created async closure functions
-    $childTid = yield \away($childTask('using async() function'));
+    // have `away` access the created async closure functions
+    $childTid = yield \away('childTask', 'using async() function');
 
     for ($i = 1; $i <= 6; ++$i) {
         echo "Parent task $tid iteration $i.\n";

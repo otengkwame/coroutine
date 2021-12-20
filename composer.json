@@ -35,7 +35,7 @@
     ],
     "require": {
         "php": ">7.1",
-        "symplely/spawn": "^4.0.0"
+        "symplely/spawn": "^4.0.1"
     },
     "autoload": {
         "files": [
@@ -43,6 +43,7 @@
             "Coroutine/Path.php",
             "Coroutine/Stream.php",
             "Coroutine/Worker.php",
+            "Coroutine/Fibers.php",
             "Coroutine/Parallel/functional_api.php"
         ],
         "psr-4": {

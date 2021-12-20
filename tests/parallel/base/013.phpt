@@ -64,11 +64,9 @@ bool(true)
 No "illegal instruction (new class) in closure on line 2 of task", all good!
 string(%d) "syntax error, unexpected '\' (T_NS_SEPARATOR), expecting identifier (T_STRING)
 
-#0 [internal function]: Opis\Closure\SerializableClosure->unserialize(%S
+#0 [internal function]: Async\Closure\SerializableClosure->%S
 #1 %S
-#2 [internal function]: Opis\Closure\SerializableClosure->unserialize(%S
+#2 [internal function]: Async\Closure\SerializableClosure->%S
 #3 %S
 #4 %S
-#5 %S
-#6 %S
-#7 {main}"
+#5 {main}"

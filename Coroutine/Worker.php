@@ -244,7 +244,7 @@ if (!\function_exists('awaitable_future')) {
   }
 
   /**
-   * Wrap the a spawn `future` with `yield`, this insure the the execution
+   * Wrap the a spawn `future` with `yield`, this insure the execution
    * and return result is handled properly.
    * - This function is used by `spawn_await()` shouldn't really be called directly.
    *

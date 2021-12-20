@@ -51,51 +51,61 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * Makes an resolvable function from label name that's callable with `away`
-   * The passed in `function/callable/task` is wrapped to be `awaitAble`
+   * Makes an resolvable function from `label` name that's callable with `await` and `away`.
+   * The passed in `function` is wrapped to be `awaitAble`.
    *
-   * This will create closure function in global namespace with supplied name as variable.
+   * - This will store a closure in `Co` static class with supplied `label` name as key.
+   * @see https://docs.python.org/3.7/reference/compound_stmts.html#async-def
    *
-   * @param string $labelFunction
-   * @param Generator|callable $asyncFunction
+   * @param string $label
+   * @param callable $function
+   * @throws Panic — if the **named** `label` function already exists.
    */
-  function async(string $labelFunction, callable $asyncFunction)
+  function async(string $label, callable $function): void
   {
-    Kernel::async($labelFunction, $asyncFunction);
+    Kernel::async($label, $function);
   }
 
   /**
-   * Wrap the value with `yield`, when placed within code block, it insure that
-   * any *function/method* will be `awaitable` and the actual return value is properly picked up.
+   * This function will `pause` and execute the `label` function, with `arguments`.
+   * Only functions created with `async` will work, anything else will throw `Panic` exception.
    *
-   * use as: `return \value($value);`
+   * - This function needs to be prefixed with `yield`
+   * @see https://docs.python.org/3/reference/expressions.html#await
    *
-   * @param mixed $value
+   * @param string $label
+   * @param mixed ...$args
+   * @return mixed
+   * @throws Panic if the **named** `label` function does not exists.
+   */
+  function await(string $label, ...$args)
+  {
+    return Kernel::await($label, ...$args);
+  }
+
+  /**
+   * Wrap the **result** with `yield`, or create a `Coroutine::value` object instance of it.
    *
+   * Of which will signal and insure the actual return `value/result` is properly picked up.
+   * - This should mostly be used within a `async` function if needed.
+   * - Mostly when returning `values/results` where `yield` was not used within that code block.
+   *
+   * use as: `return value($result);`
+   *
+   * @param mixed $result
+   * @param bool $byObject - return a `Coroutine::value` **object**
    * @return mixed
    *
    * @internal
    */
-  function value($value)
+  function value($result, bool $byObject = true)
   {
-    yield;
-    return yield $value;
-  }
-
-  /**
-   * Creates an object instance of the value which will signal, and insure the actual return value is properly picked up.
-   *
-   * use as: `return \result($value);`
-   *
-   * @param mixed $value
-   *
-   * @return mixed
-   *
-   * @internal
-   */
-  function result($value)
-  {
-    yield Coroutine::value($value);
+    if ($byObject) {
+      return yield Coroutine::value($result);
+    } else {
+      yield;
+      return yield $result;
+    }
   }
 
   /**
@@ -106,7 +116,7 @@ if (!\function_exists('coroutine_run')) {
    *
    * - This function needs to be prefixed with `yield`
    *
-   * @param Generator|callable $awaitableFunction
+   * @param Generator|callable|string $awaitableFunction
    * @param mixed ...$args - if **$awaitableFunction** is `Generator`, $args can hold `customState`, and `customData`
    * - for third party code integration.
    *
@@ -246,14 +256,14 @@ if (!\function_exists('coroutine_run')) {
    *
    * @see https://www.golang-book.com/books/intro/10#section1
    *
-   * @param callable $goFunction
+   * @param Generator|callable|string $function
    * @param mixed $args - if `generator`, $args can hold `customState`, and `customData`
    *
    * @return int task id
    */
-  function go($goFunction, ...$args)
+  function go($function, ...$args)
   {
-    return Kernel::away($goFunction, ...$args);
+    return Kernel::away($function, ...$args);
   }
 
   /**
@@ -414,7 +424,8 @@ if (!\function_exists('coroutine_run')) {
       $coroutine->setup(false);
     }
 
-    Co::clear();
+    Co::reset();
+    Co::resetAsync();
   }
 
   function coroutine_create(\Generator $routine = null)
@@ -440,12 +451,7 @@ if (!\function_exists('coroutine_run')) {
    */
   function coroutine_run(\Generator $routine = null)
   {
-    $coroutine = \coroutine_create($routine);
-
-    if ($coroutine instanceof CoroutineInterface) {
-      $coroutine->run();
-      return true;
-    }
+    \coroutine_create($routine)->run();
   }
 
   /**

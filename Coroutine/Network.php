@@ -92,7 +92,7 @@ final class Network
   public static function address(string $hostname, bool $useUv = true)
   {
     if (!\filter_var($hostname, \FILTER_VALIDATE_DOMAIN, \FILTER_FLAG_HOSTNAME)) {
-      return \result(false);
+      return \value(false);
     }
 
     $co = \coroutine_instance();
@@ -131,7 +131,7 @@ final class Network
   public static function name(string $ipAddress)
   {
     if (!\filter_var($ipAddress, \FILTER_VALIDATE_IP)) {
-      return \result(false);
+      return \value(false);
     }
 
     return spawn_system('gethostbyaddr', $ipAddress);
@@ -162,7 +162,7 @@ final class Network
   public static function record(string $hostname, int $options = \DNS_A)
   {
     if (!\filter_var($hostname, \FILTER_VALIDATE_DOMAIN, \FILTER_FLAG_HOSTNAME)) {
-      return \result(false);
+      return \value(false);
     }
 
     return spawn_system('dns_get_record', $hostname, $options);

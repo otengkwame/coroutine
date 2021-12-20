@@ -247,11 +247,11 @@ final class Coroutine implements CoroutineInterface
    * installed, which provides an interface to `libuv` library. An native like **PHP** event loop engine.
    * - To manually turn off `libuv` use: `->setup(false);`
    *
-   * @see https://github.com/bwoebi/php-uv
+   * @see https://github.com/amphp/ext-uv
    */
   public function __construct()
   {
-    Co::clear();
+    Co::reset();
     Co::setLoop($this);
     $this->initSignals();
 
@@ -306,7 +306,7 @@ final class Coroutine implements CoroutineInterface
     $this->taskQueue = new \SplQueue();
   }
 
-  protected function timestamp()
+  protected function timestamp(): float
   {
     return (float) ($this->isHighTimer ? \hrtime(true) / 1e+9 : \microtime(true));
   }
@@ -573,6 +573,7 @@ final class Coroutine implements CoroutineInterface
     }
 
     $this->close();
+    Co::resetAsync();
   }
 
   public function cancelTask(int $tid, $customState = null)

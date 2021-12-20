@@ -22,5 +22,4 @@ string(%d) "Serialization of 'Generator' is not allowed
 
 #0 %S
 #1 %S
-#2 %S
-#3 {main}"
+#2 {main}"

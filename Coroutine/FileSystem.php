@@ -123,7 +123,7 @@ final class FileSystem
   {
     $result = \fstat($fd);
 
-    return yield \result((empty($info) ? $result : $result[$info]));
+    return yield \value((empty($info) ? $result : $result[$info]));
   }
 
   /**
@@ -585,7 +585,7 @@ final class FileSystem
       );
     }
 
-    return \result(\fflush($fd));
+    return \value(\fflush($fd));
   }
 
   /**
@@ -867,7 +867,7 @@ final class FileSystem
       );
     }
 
-    return \result(false);
+    return \value(false);
   }
 
   /**
@@ -900,13 +900,13 @@ final class FileSystem
       );
     }
 
-    return \result(false);
+    return \value(false);
   }
 
   protected static function send($out_fd, $in_fd, int $offset = 0, int $length = 8192)
   {
     if (!\is_resource($out_fd) || !\is_resource($in_fd)) {
-      return yield \result(false);
+      return yield \value(false);
     }
 
     $data = yield self::read($in_fd, $offset, $length);
@@ -914,7 +914,7 @@ final class FileSystem
     if ($count) {
       $result = yield self::write($out_fd, $data);
       if (false === $result) {
-        return yield \result(false);
+        return yield \value(false);
       }
 
       @\rewind($out_fd);
@@ -1034,7 +1034,7 @@ final class FileSystem
       );
     }
 
-    return \result(false);
+    return \value(false);
   }
 
   protected static function readFile($fd, $offset = null, $length = null)
@@ -1162,7 +1162,7 @@ final class FileSystem
   public static function close($fd)
   {
     if (!\is_resource($fd))
-      return \result(false);
+      return \value(false);
 
     if (self::isUv() && (self::meta($fd, 'wrapper_type') !== 'http')) {
       return new Kernel(
@@ -1240,7 +1240,7 @@ final class FileSystem
   public static function contents($fd, int $size = 256, float $timeout_seconds = 0.5)
   {
     if (!\is_resource($fd))
-      return yield \result(false);
+      return yield \value(false);
 
     $contents = '';
     while (true) {
