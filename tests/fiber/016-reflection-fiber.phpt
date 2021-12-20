@@ -67,7 +67,22 @@ bool(true)
 bool(false)
 string(%d) %S
 int(%d)
-array(13) {
+array(%d) {
+%S  [0]=>
+%S  array(%d) {
+%S    ["function"]=>
+%S    string(%d) "create"
+%S    ["class"]=>
+%S    string(%d) "Async\Coroutine"
+%S    ["type"]=>
+%S    string(2) "::"
+%S    ["args"]=>
+%S    array(1) {
+%S      [0]=>
+%S      object(Generator)#%d (0) {
+%S      }
+%S    }
+%S  }
 %S
 %S  object(Async\Task)#%d (%d) {
 %S    ["taskId":protected]=>
