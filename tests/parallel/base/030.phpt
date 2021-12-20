@@ -33,7 +33,6 @@ Stack trace:
 #0 %S
 #1 %S
 #2 %S
-#3 [internal function]: Async\Parallel->markAsFailed(%S
+#3 [internal function]: %S
 #4 %S
 #5 %S
-#6 %S
