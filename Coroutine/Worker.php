@@ -6,7 +6,6 @@ namespace Async\Worker;
 
 use Async\Spawn\Channeled;
 use Async\Kernel;
-use Async\Exceptions\Panic;
 
 if (!\function_exists('awaitable_future')) {
   /**
@@ -180,34 +179,6 @@ if (!\function_exists('awaitable_future')) {
       $signalTask
     ) {
       return Kernel::addFuture($callable, $timeout, $display, $channel, $channelTask, $signal, $signalTask);
-    });
-  }
-
-  /**
-   * Executes a blocking system call asynchronously in a **child/subprocess**.
-   * By `proc_open`, or `uv_spawn` if **libuv** is loaded.
-   * - This function needs to be prefixed with `yield`
-   *
-   * @param string $command Any `PHP` builtin system operation command.
-   * @param mixed ...$parameters
-   *
-   * @return  mixed
-   * @throws Panic if not a callable.
-   */
-  function spawn_system(string $command, ...$parameters)
-  {
-    if (!\is_callable($command)) {
-      \panic('Not a valid PHP callable command!');
-    }
-
-    // @codeCoverageIgnoreStart
-    $system = function () use ($command, $parameters) {
-      return @$command(...$parameters);
-    };
-    // @codeCoverageIgnoreEnd
-
-    return awaitable_future(function () use ($system) {
-      return Kernel::addFuture($system);
     });
   }
 

@@ -67,13 +67,16 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * This function will `pause` and execute the `label` function, with `arguments`.
-   * Only functions created with `async` will work, anything else will throw `Panic` exception.
+   * This function will `pause` and execute the `label` function, with `arguments`,
+   * only functions created with `async` or a `PHP` builtin callable will work, anything else will throw `Panic` exception.
+   * If `label` is a `PHP` builtin _command/function_ it will execute asynchronously in a **child/subprocess**,
+   * by `proc_open`, or `uv_spawn` if **libuv** is loaded.
    *
    * - This function needs to be prefixed with `yield`
-   * @see https://docs.python.org/3/reference/expressions.html#await
    *
-   * @param string $label
+   * @see https://docs.python.org/3.7/reference/expressions.html#await
+   *
+   * @param string $label `async` function or `PHP` builtin function.
    * @param mixed ...$args
    * @return mixed
    * @throws Panic if the **named** `label` function does not exists.
@@ -168,7 +171,7 @@ if (!\function_exists('coroutine_run')) {
    * - This function needs to be prefixed with `yield`
    *
    * @param int|array $taskId
-   * @return array associative `$taskId` => `$result`
+   * @return array[] associative `$taskId` => `$result`
    */
   function gather(...$taskId)
   {
@@ -380,13 +383,15 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * Return the `string` of a variable type, or does a check, compared with string of the type.
+   * Return the `string` of a variable type, or does a check, compared with string of the `type`.
    * Types are: `callable`, `string`, `int`, `float`, `null`, `bool`, `array`, `scalar`,
    * `object`, or `resource`
    *
+   * @param mixed $variable
+   * @param string|null $type
    * @return string|bool
    */
-  function is_type($variable, string $comparedWith = null)
+  function is_type($variable, string $type = null)
   {
     $checks = [
       'is_callable' => 'callable',
@@ -403,7 +408,7 @@ if (!\function_exists('coroutine_run')) {
 
     foreach ($checks as $func => $val) {
       if ($func($variable)) {
-        return (empty($comparedWith)) ? $val : ($comparedWith == $val);
+        return (empty($type)) ? $val : ($type == $val);
       }
     }
 
@@ -417,7 +422,7 @@ if (!\function_exists('coroutine_run')) {
     return Co::getLoop();
   }
 
-  function coroutine_clear()
+  function coroutine_clear(): void
   {
     $coroutine = Co::getLoop();
     if ($coroutine instanceof CoroutineInterface) {
@@ -428,7 +433,7 @@ if (!\function_exists('coroutine_run')) {
     Co::resetAsync();
   }
 
-  function coroutine_create(\Generator $routine = null)
+  function coroutine_create(\Generator $routine = null): CoroutineInterface
   {
     $coroutine = \coroutine_instance();
     if (!$coroutine instanceof CoroutineInterface)
@@ -447,11 +452,19 @@ if (!\function_exists('coroutine_run')) {
    *
    * @see https://docs.python.org/3.8/library/asyncio-task.html#asyncio.run
    *
-   * @param Generator $routine
+   * @param generator|string $routine **main** `coroutine` or `async` function.
+   * @param mixed ...$args if **routine** is `async` function.
+   * @throws Panic If **routine** not valid.
    */
-  function coroutine_run(\Generator $routine = null)
+  function coroutine_run($routine = null, ...$args): void
   {
-    \coroutine_create($routine)->run();
+    if (\is_string($routine) && Co::isFunction($routine))
+      $routine = Co::getFunction($routine)(...$args);
+
+    if ($routine instanceof \Generator || empty($routine))
+      \coroutine_create($routine)->run();
+    else
+      \panic("Invalid `coroutine` or no `async` function found!");
   }
 
   /**

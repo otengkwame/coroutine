@@ -573,7 +573,6 @@ final class Coroutine implements CoroutineInterface
     }
 
     $this->close();
-    Co::resetAsync();
   }
 
   public function cancelTask(int $tid, $customState = null)

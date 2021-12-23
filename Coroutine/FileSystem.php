@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Async;
 
-use function Async\Worker\spawn_system;
-
 use Async\Kernel;
 use Async\TaskInterface;
 use Async\Coroutine;
@@ -97,7 +95,7 @@ final class FileSystem
 
   protected static function spawnStat($path, string $info = null)
   {
-    $result = yield spawn_system('stat', $path);
+    $result = yield \await('stat', $path);
 
     try {
       $result = empty($info) ?: $result[$info];
@@ -114,7 +112,7 @@ final class FileSystem
    */
   protected static function spawnLstat($path, $info = null)
   {
-    $result = yield spawn_system('lstat', $path);
+    $result = yield \await('lstat', $path);
 
     return empty($info) ? $result : $result[$info];
   }
@@ -154,7 +152,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('rename', $from, $to);
+    return \await('rename', $from, $to);
   }
 
   /**
@@ -203,7 +201,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('touch', $path, $time, $atime);
+    return \await('touch', $path, $time, $atime);
   }
 
   /**
@@ -230,7 +228,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('unlink', $path);
+    return \await('unlink', $path);
   }
 
   /**
@@ -261,7 +259,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('link', $from, $to);
+    return \await('link', $from, $to);
   }
 
   /**
@@ -292,7 +290,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('symlink', $from, $to);
+    return \await('symlink', $from, $to);
   }
 
   /**
@@ -319,7 +317,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('readlink', $path);
+    return \await('readlink', $path);
   }
 
   /**
@@ -349,7 +347,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('mkdir', $path, $mode, $recursive);
+    return \await('mkdir', $path, $mode, $recursive);
   }
 
   /**
@@ -376,7 +374,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('rmdir', $path);
+    return \await('rmdir', $path);
   }
 
   /**
@@ -407,7 +405,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('chmod', $filename, $mode);
+    return \await('chmod', $filename, $mode);
   }
 
   /**
@@ -440,7 +438,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('chown', $path, $uid);
+    return \await('chown', $path, $uid);
   }
 
   /**
@@ -756,7 +754,7 @@ final class FileSystem
       return self::scandir($path, $flag);
     }
 
-    return spawn_system('readdir', $path);
+    return \await('readdir', $path);
   }
 
   /**
@@ -785,7 +783,7 @@ final class FileSystem
       );
     }
 
-    return spawn_system('scandir', $path, $flagSortingOrder);
+    return \await('scandir', $path, $flagSortingOrder);
   }
 
   /**
@@ -820,7 +818,7 @@ final class FileSystem
 
     $utime = empty($utime) ? \time() : $utime;
     $atime = empty($atime) ? \time() : $atime;
-    return spawn_system('touch', $path, $utime, $atime);
+    return \await('touch', $path, $utime, $atime);
   }
 
   /**

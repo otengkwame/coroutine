@@ -15,10 +15,13 @@ use Async\FiberInterface;
  */
 final class Co
 {
+  /**
+   * @var array[]
+   */
   protected static $parallel;
 
   /**
-   * @var array[<float|null|bool>]
+   * @var array<float|null|bool]
    */
   protected static $timer;
 
@@ -33,7 +36,7 @@ final class Co
   protected static $fibers;
 
   /**
-   * @var \Closure[]<\Generator>
+   * @var \Closure[Generator]
    */
   protected static $functions;
 

@@ -382,7 +382,7 @@ class FileSystemTest extends TestCase
     public function taskSystemError()
     {
         $this->expectException(Panic::class);
-        yield spawn_system('/');
+        yield await('/');
 
         yield \shutdown();
     }

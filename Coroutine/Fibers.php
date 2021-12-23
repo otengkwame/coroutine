@@ -22,8 +22,8 @@ if (!\function_exists('fiberizing')) {
 
   /**
    * Suspend execution of the fiber. The fiber may be resumed with {@see Fiber::resume()} or {@see Fiber::throw()}.
-   *
    * Cannot be called from {main}.
+   * - This function needs to be prefixed with `yield`
    *
    * @param mixed $with Value to return from {@see Fiber::resume()} or {@see Fiber::throw()}.
    *
@@ -38,6 +38,7 @@ if (!\function_exists('fiberizing')) {
 
   /**
    * Starts execution of the fiber. Returns when the fiber suspends or terminates.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $tag an instance name
    * @param mixed ...$with Arguments passed to fiber function.
@@ -56,6 +57,7 @@ if (!\function_exists('fiberizing')) {
   /**
    * Resumes the fiber, returning the given value from {@see Fiber::suspend()}.
    * Returns when the fiber suspends or terminates.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $tag an instance name
    * @param mixed $with
@@ -74,6 +76,7 @@ if (!\function_exists('fiberizing')) {
   /**
    * Throws the given exception into the fiber from {@see Fiber::suspend()}.
    * Returns when the fiber suspends or terminates.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $tag an instance name
    * @param \Throwable $error
@@ -85,8 +88,11 @@ if (!\function_exists('fiberizing')) {
    */
   function throwing(string $tag, \Throwable $error)
   {
-    if (Co::isFiber($tag))
-      return Co::getFiber($tag)->throw($error);
+    if (Co::isFiber($tag)) {
+      $fiber = Co::getFiber($tag);
+      Co::clearFiber($tag);
+      return $fiber->throw($error);
+    }
   }
 
   /**

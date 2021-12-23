@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Async\Path;
 
-use function Async\Worker\{awaitable_future, spawn_system};
+use function Async\Worker\awaitable_future;
 
 use Async\Kernel;
 use Async\FileSystem;
@@ -83,7 +83,7 @@ if (!\function_exists('file_operation')) {
   function monitor_dir(string $directory, int $monitorTask)
   {
     $directory = slash_switch($directory);
-    yield spawn_system('mkdir', $directory, 0777, true);
+    yield await('mkdir', $directory, 0777, true);
 
     return yield monitor($directory, $monitorTask);
   }
@@ -598,7 +598,7 @@ if (!\function_exists('file_operation')) {
    */
   function file_file($path)
   {
-    return spawn_system('file', $path, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
+    return await('file', $path, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
   }
 
   /**

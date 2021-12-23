@@ -6,7 +6,7 @@ namespace Async;
 
 use function Async\Path\file_exist;
 use function Async\Stream\dns_address;
-use function Async\Worker\{awaitable_future, spawn_system};
+use function Async\Worker\awaitable_future;
 
 use Async\Kernel;
 use Async\TaskInterface;
@@ -117,7 +117,7 @@ final class Network
       );
     }
 
-    return spawn_system('gethostbyname', $hostname);
+    return await('gethostbyname', $hostname);
   }
 
   /**
@@ -134,7 +134,7 @@ final class Network
       return \value(false);
     }
 
-    return spawn_system('gethostbyaddr', $ipAddress);
+    return await('gethostbyaddr', $ipAddress);
   }
 
   /**
@@ -165,7 +165,7 @@ final class Network
       return \value(false);
     }
 
-    return spawn_system('dns_get_record', $hostname, $options);
+    return await('dns_get_record', $hostname, $options);
   }
 
   /**

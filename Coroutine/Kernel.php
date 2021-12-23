@@ -17,6 +17,8 @@ use Async\Exceptions\CancelledError;
 use Async\Exceptions\Panic;
 use Async\FiberInterface;
 
+use function Async\Worker\awaitable_future;
+
 /**
  * The Kernel
  * This class is used for Communication between the tasks and the scheduler
@@ -648,7 +650,7 @@ final class Kernel
    * @see https://docs.python.org/3.7/library/asyncio-task.html#asyncio.gather
    *
    * @param int|array $taskId
-   * @return array associative `$taskId` => `$result`
+   * @return array[] associative `$taskId` => `$result`
    */
   public static function gather(...$taskId)
   {
@@ -1004,21 +1006,50 @@ final class Kernel
   }
 
   /**
-   * This function will `pause` and execute the `label` function, with `arguments`.
-   * Only functions created with `async` will work, anything else will throw `Panic` exception.
+   * This function will `pause` and execute the `label` function, with `arguments`,
+   * only functions created with `async` or a `PHP` builtin callable will work, anything else will throw `Panic` exception.
+   * If `label` is a `PHP` builtin _command/function_ it will execute asynchronously in a **child/subprocess**,
+   * by `proc_open`, or `uv_spawn` if **libuv** is loaded.
    *
    * - This function needs to be prefixed with `yield`
+   *
    * @see https://docs.python.org/3.7/reference/expressions.html#await
    *
-   * @param string $label
+   * @param string $label `async` function or `PHP` builtin function.
    * @param mixed ...$arguments
    * @return mixed
    * @throws Panic if the **named** `label` function does not exists.
    */
   public static function await(string $label, ...$arguments)
   {
+    switch ($label) {
+      case 'sleep':
+        [$delay, $result] = $arguments;
+        return yield Kernel::sleepFor($delay, $result);
+        // case '':
+        //   [] = $arguments;
+    }
+
     if (Co::isFunction($label)) {
       return yield Co::getFunction($label)(...$arguments);
+    }
+
+    $display = \strpos($label, '*', 1) !== false;
+    $away = \strpos($label, '*', 0);
+    $label = \str_replace(['*', ' '], '', $label);
+    if (\is_callable($label)) {
+      // @codeCoverageIgnoreStart
+      $system = function () use ($label, $arguments) {
+        return @$label(...$arguments);
+      };
+      // @codeCoverageIgnoreEnd
+
+      if ($away === 0)
+        return yield Kernel::spawnTask($system, 0, $display);
+
+      return yield awaitable_future(function () use ($system, $display) {
+        return Kernel::addFuture($system, 0, $display);
+      });
     }
 
     \panic("No function named: '{$label}' exists!");
@@ -1030,7 +1061,7 @@ final class Kernel
    *
    * @see https://docs.python.org/3.7/library/asyncio-task.html#asyncio.create_task
    *
-   * @param Generator|callable|string $label
+   * @param generator|callable|string $label
    * @param mixed ...$args - if **$label** is `Generator`, $args can hold `customState`, and `customData`
    * - for third party code integration.
    *
@@ -1040,34 +1071,34 @@ final class Kernel
   {
     if (\is_string($label) && Co::isFunction($label)) {
       return Kernel::createTask(Co::getFunction($label)(...$args));
-    } else {
-      return new Kernel(
-        function ($task, CoroutineInterface $coroutine) use ($label, $args) {
-          if ($label instanceof \Generator) {
-            $tid = $coroutine->createTask($label);
-            if (!empty($args)) {
-              $createdTask = $coroutine->taskInstance($tid);
-              if (($args[0] === 'true') || ($args[0] === true))
-                $createdTask->customState(true);
-              else
-                $createdTask->customState($args[0]);
+    }
 
-              if (isset($args[1])) {
-                $createdTask->customData($args[1]);
-              }
+    return new Kernel(
+      function ($task, CoroutineInterface $coroutine) use ($label, $args) {
+        if ($label instanceof \Generator) {
+          $tid = $coroutine->createTask($label);
+          if (!empty($args)) {
+            $createdTask = $coroutine->taskInstance($tid);
+            if (($args[0] === 'true') || ($args[0] === true))
+              $createdTask->customState(true);
+            else
+              $createdTask->customState($args[0]);
+
+            if (isset($args[1])) {
+              $createdTask->customData($args[1]);
             }
-
-            $task->sendValue($tid);
-          } else {
-            $task->sendValue($coroutine->createTask(\awaitAble($label, ...$args)));
           }
 
-          $coroutine->isFiber($task)
-            ? $coroutine->scheduleFiber($task)
-            : $coroutine->schedule($task);
+          $task->sendValue($tid);
+        } else {
+          $task->sendValue($coroutine->createTask(\awaitAble($label, ...$args)));
         }
-      );
-    }
+
+        $coroutine->isFiber($task)
+          ? $coroutine->scheduleFiber($task)
+          : $coroutine->schedule($task);
+      }
+    );
   }
 
   public static function suspendFiber($data)
