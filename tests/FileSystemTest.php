@@ -32,7 +32,6 @@ use function Async\Path\{
     monitor_dir,
     monitor_task
 };
-use function Async\Worker\spawn_system;
 
 use Async\FileSystem;
 use Async\Exceptions\Panic;

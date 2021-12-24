@@ -523,6 +523,7 @@ if (!\function_exists('file_operation')) {
   /**
    * Reads remainder of a stream/file pointer by size into a string,
    * will stop if timeout seconds lapse.
+   * - This function needs to be prefixed with `yield`
    *
    * @param resource $fd
    * @param integer $size

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Async;
 
+use Fiber;
 use Async\Spawn\Globals;
 use Async\FiberInterface;
 
@@ -31,7 +32,7 @@ final class Co
   protected static $instance;
 
   /**
-   * @var FiberInterface[]
+   * @var Fiber[]|FiberInterface[]
    */
   protected static $fibers;
 
@@ -50,12 +51,18 @@ final class Co
     return self::$instance;
   }
 
-  public static function addFiber(string $tag, FiberInterface $fiber): void
+  public static function addFiber(string $tag, $fiber): void
   {
     if (self::isFiber($tag))
       \panic("Fiber named: '{$tag}' already exists!");
 
-    self::$fibers[$tag] = $fiber;
+    if ($fiber instanceof FiberInterface || $fiber instanceof Fiber) {
+      self::$fibers[$tag] = $fiber;
+    } else {
+      // @codeCoverageIgnoreStart
+      \panic('Not an instance of `FiberInterface` or `PHP built-in Fibers`!');
+      // @codeCoverageIgnoreEnd
+    }
   }
 
   public static function isFiber(string $tag): bool
@@ -63,7 +70,7 @@ final class Co
     return isset(self::$fibers[$tag]);
   }
 
-  public static function getFiber(string $tag): FiberInterface
+  public static function getFiber(string $tag)
   {
     return self::$fibers[$tag];
   }

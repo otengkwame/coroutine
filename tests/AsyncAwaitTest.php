@@ -134,7 +134,7 @@ class AsyncAwaitTest extends TestCase
 
         $result = yield await('file_get_contents', __DIR__ . \DS . 'list.txt');
         $this->assertStringContainsString('http://google.com/', $result);
-        $this->assertGreaterThan(1000, $this->result);
+        $this->assertGreaterThan(100, $this->result);
         yield \shutdown();
     }
 
@@ -158,7 +158,7 @@ class AsyncAwaitTest extends TestCase
         $this->assertTrue(\is_type($tid, 'int'));
         $result = yield \gather($tid);
         $this->assertStringContainsString('http://google.com/', $result[$tid]);
-        $this->assertGreaterThan(1500, $this->result);
+        $this->assertGreaterThan(100, $this->result);
         yield \shutdown();
     }
 
