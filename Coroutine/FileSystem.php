@@ -126,6 +126,7 @@ final class FileSystem
 
   /**
    * Renames a file or directory.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $from
    * @param string $to
@@ -156,9 +157,15 @@ final class FileSystem
   }
 
   /**
-   * Sets access and modification time of file
+   * Sets access and modification time of file.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param string $path
+   * @param int $time
+   * @param int $atime
+   * @return bool
    */
-  public static function touch($path, $time = null, $atime = null)
+  public static function touch($path = null, int $time = null, int $atime = null)
   {
     if (self::isUv()) {
       return new Kernel(
@@ -206,6 +213,7 @@ final class FileSystem
 
   /**
    * Deletes a file.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    */
@@ -233,6 +241,7 @@ final class FileSystem
 
   /**
    * Create a hard link.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -264,12 +273,13 @@ final class FileSystem
 
   /**
    * Creates a symbolic link.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $from
    * @param string $to
    * @param int $flag
    */
-  public static function symlink(string $from, string $to, int $flag = 0)
+  public static function symlink(string $from = null, string $to = null, int $flag = 0)
   {
     if (self::isUv()) {
       return new Kernel(
@@ -295,6 +305,7 @@ final class FileSystem
 
   /**
    * Read value of a symbolic link.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    */
@@ -322,12 +333,13 @@ final class FileSystem
 
   /**
    * Attempts to create the directory specified by pathname.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    * @param integer $mode
    * @param boolean $recursive
    */
-  public static function mkdir(string $path, int $mode = 0777, $recursive = false)
+  public static function mkdir(string $path = null, int $mode = 0777, $recursive = false)
   {
     if (self::isUv()) {
       return new Kernel(
@@ -352,6 +364,7 @@ final class FileSystem
 
   /**
    * Removes directory.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    */
@@ -379,6 +392,7 @@ final class FileSystem
 
   /**
    * Changes file mode.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -410,6 +424,7 @@ final class FileSystem
 
   /**
    * Changes file owner.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -443,6 +458,7 @@ final class FileSystem
 
   /**
    * Changes file owner by file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -474,6 +490,7 @@ final class FileSystem
 
   /**
    * Changes file mode by file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -503,6 +520,7 @@ final class FileSystem
 
   /**
    * Truncate a file to a specified offset by file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -534,6 +552,7 @@ final class FileSystem
 
   /**
    * Synchronize a file's in-core state with storage device by file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -561,6 +580,7 @@ final class FileSystem
 
   /**
    * Synchronize a file's in-core state with storage device by file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @param resource $fd
    */
@@ -587,7 +607,8 @@ final class FileSystem
   }
 
   /**
-   * Gives information about a file symbolic link, returns same data as `stat()`
+   * Gives information about a file symbolic link, returns same data as `stat()`.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    * @param string $info
@@ -639,6 +660,7 @@ final class FileSystem
 
   /**
    * Gives information about a file.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    * @param string $info
@@ -690,6 +712,7 @@ final class FileSystem
 
   /**
    * Gets information about a file using an open file pointer.
+   * - This function needs to be prefixed with `yield`
    *
    * @param resource $fd
    * @param string $info
@@ -741,6 +764,7 @@ final class FileSystem
 
   /**
    * Read entry from directory.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -759,6 +783,7 @@ final class FileSystem
 
   /**
    * List files and directories inside the specified path.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    * @param mixed $flagSortingOrder
@@ -788,6 +813,7 @@ final class FileSystem
 
   /**
    * Change file last access and modification times.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    * @param int $utime
@@ -870,6 +896,7 @@ final class FileSystem
 
   /**
    * change file timestamps using file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @codeCoverageIgnore
    *
@@ -922,6 +949,7 @@ final class FileSystem
 
   /**
    * Transfer data between file descriptors.
+   * - This function needs to be prefixed with `yield`
    *
    * @param resource $out_fd
    * @param resource $in_fd
@@ -955,6 +983,7 @@ final class FileSystem
 
   /**
    * Open specified `$path` file with access `$flag`.
+   * - This function needs to be prefixed with `yield`
    *
    * @param string $path
    * @param string $flag either **`r`, `r+`, `w`, `w+`, `a`, `a+`, `x`, `x+`, `c`, `c+`**:
@@ -1045,7 +1074,8 @@ final class FileSystem
   }
 
   /**
-   * Read file pointed to by the resource file descriptor
+   * Read file pointed to by the resource file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @param resource $fd
    * @param int $offset
@@ -1106,7 +1136,8 @@ final class FileSystem
   }
 
   /**
-   * Write to file pointed to by the resource file descriptor
+   * Write to file pointed to by the resource file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @param resource $fd
    * @param string $buffer
@@ -1154,6 +1185,7 @@ final class FileSystem
 
   /**
    * Close file pointed to by the resource file descriptor.
+   * - This function needs to be prefixed with `yield`
    *
    * @param resource $fd
    */

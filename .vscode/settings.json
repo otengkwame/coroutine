@@ -17,6 +17,7 @@
         "IANA",
         "IRUSR",
         "libuv",
+        "maxsize",
         "nlink",
         "PECL",
         "PHPSESSID",

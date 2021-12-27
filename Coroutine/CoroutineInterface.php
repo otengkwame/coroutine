@@ -15,7 +15,8 @@ interface CoroutineInterface
    * Creates a new task (using the next free task id).
    * wraps coroutine into a Task and schedule its execution. Return the Task object/id.
    *
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#creating-tasks
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#creating-tasks
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
    *
    * @param \Generator $coroutine
    * @return int task id
@@ -82,11 +83,17 @@ interface CoroutineInterface
    * kill/remove an task using task id,
    * optionally pass custom cancel state for third party code integration.
    *
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#asyncio.Task.cancel
+   * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L181
+   *
    * @param int $tid
    * @param mixed $customState
+   * @param string $errorMessage
    * @return bool
+   *
+   * @throws \InvalidArgumentException
    */
-  public function cancelTask(int $tid, $customState = null);
+  public function cancelTask(int $tid, $customState = null, string $errorMessage = 'Invalid task ID!');
 
   /**
    * Start the main supervisor task.
@@ -111,7 +118,8 @@ interface CoroutineInterface
    * monitoring for read availability and invoke callback
    * once it's available for reading.
    *
-   * @see https://docs.python.org/3.7/library/asyncio-eventloop.html#asyncio.loop.add_reader
+   * @see https://docs.python.org/3.9/library/asyncio-eventloop.html#asyncio.loop.add_reader
+   * @source https://github.com/python/cpython/blob/aa056ed472e9d0a79ea21784f6f5171d12a13f85/Lib/asyncio/selector_events.py#L257
    *
    * @param resource $stream
    * @param Fiber|Task|\Generator|Callable $task
@@ -123,7 +131,8 @@ interface CoroutineInterface
    * monitoring for write availability and invoke callback
    * once it's available for writing.
    *
-   * @see https://docs.python.org/3.7/library/asyncio-eventloop.html#asyncio.loop.add_writer
+   * @see https://docs.python.org/3.9/library/asyncio-eventloop.html#asyncio.loop.add_writer
+   * @source https://github.com/python/cpython/blob/aa056ed472e9d0a79ea21784f6f5171d12a13f85/Lib/asyncio/selector_events.py#L294
    *
    * @param resource $stream
    * @param Fiber|Task|\Generator|Callable $task
@@ -133,7 +142,8 @@ interface CoroutineInterface
   /**
    * Stop monitoring the `event/socket/stream/file` descriptor for read availability.
    *
-   * @see https://docs.python.org/3.7/library/asyncio-eventloop.html#asyncio.loop.remove_reader
+   * @see https://docs.python.org/3.9/library/asyncio-eventloop.html#asyncio.loop.remove_reader
+   * @source https://github.com/python/cpython/blob/aa056ed472e9d0a79ea21784f6f5171d12a13f85/Lib/asyncio/selector_events.py#L273
    *
    * @param resource $stream
    */
@@ -142,7 +152,9 @@ interface CoroutineInterface
   /**
    * Stop monitoring the `event/socket/stream/file` descriptor for write availability.
    *
-   * @see https://docs.python.org/3.7/library/asyncio-eventloop.html#asyncio.loop.remove_writer
+   * @see https://docs.python.org/3.9/library/asyncio-eventloop.html#asyncio.loop.remove_writer
+   * @source https://github.com/python/cpython/blob/aa056ed472e9d0a79ea21784f6f5171d12a13f85/Lib/asyncio/selector_events.py#L310
+   *
    * @param resource $stream
    */
   public function removeWriter($stream): CoroutineInterface;
@@ -211,9 +223,9 @@ interface CoroutineInterface
    *
    * @internal
    *
-   * @return null|TaskInterface
+   * @return null|TaskInterface|FiberInstance
    */
-  public function taskInstance(int $taskId = 0): ?TaskInterface;
+  public function taskInstance(int $taskId = 0);
 
   /**
    * Add callable for parallel processing, in an separate php process

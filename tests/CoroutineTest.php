@@ -123,9 +123,12 @@ class CoroutineTest extends TestCase
     {
         $tid = (yield Kernel::getTask());
         $this->assertNotNull($tid);
-        while (true) {
-            $this->task .= "Child task $tid still alive!\n";
-            yield;
+        try {
+            while (true) {
+                $this->task .= "Child task $tid still alive!\n";
+                yield;
+            }
+        } catch (\Async\Exceptions\CancelledError $e) {
         }
     }
 

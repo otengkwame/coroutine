@@ -68,10 +68,13 @@ class AsyncAwaitTest extends TestCase
         });
 
         $toCancel = yield \away(function () {
-            $this->result = 0;
-            while (true) {
-                $this->result++;
-                yield;
+            try {
+                $this->result = 0;
+                while (true) {
+                    $this->result++;
+                    yield;
+                }
+            } catch (\Async\Exceptions\CancelledError $e) {
             }
         });
 

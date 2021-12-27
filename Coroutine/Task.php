@@ -12,19 +12,20 @@ use Async\Exceptions\InvalidStateError;
 
 /**
  * Task is used to schedule coroutines concurrently.
- * When a coroutine is wrapped into a Task with functions like Coroutine::createTask()
+ * When a coroutine is wrapped into a Task with functions like __createTask()__, __away()__ or __await('spawn')__
  * the coroutine is automatically scheduled to run soon.
  *
  * This Task class can also be seen to operate like an Fiber according to the RFC spec https://wiki.php.net/rfc/fiber
  *
  * @see https://curio.readthedocs.io/en/latest/reference.html#tasks
+ * @source https://github.com/dabeaz/curio/blob/master/curio/task.py#L93
  */
 final class Task implements TaskInterface
 {
   const ERROR_MESSAGES = [
     'The operation has been cancelled, with: ',
     'The operation has exceeded the given deadline: ',
-    'Coroutine task has erred: ',
+    'The task has erred: ',
     'Invalid internal state called on: '
   ];
 

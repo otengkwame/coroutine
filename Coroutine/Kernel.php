@@ -136,6 +136,8 @@ final class Kernel
 
   /**
    * Create an new task
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#creating-tasks
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
    *
    * @return int task ID
    */
@@ -223,21 +225,35 @@ final class Kernel
    * kill/remove an task using task id.
    * Optionally pass custom cancel state and error message for third party code integration.
    *
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#asyncio.Task.cancel
+   * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L181
+   *
    * @param int $tid
    * @param mixed $customState
    * @param string $errorMessage
+   * @return bool
    *
    * @throws \InvalidArgumentException
    */
-  public static function cancelTask($tid, $customState = null, string $errorMessage = 'Invalid task ID!')
+  public static function cancelTask($tid = 0, $customState = null, string $errorMessage = 'Invalid task ID!')
   {
     return new Kernel(
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($tid, $customState, $errorMessage) {
-        if ($coroutine->cancelTask($tid, $customState)) {
+        $cancelTask = $coroutine->taskInstance($tid);
+        if (!\is_null($cancelTask)) {
+          if (!empty($customState))
+            $cancelTask->customState($customState);
+
+          $cancelTask->setException(new CancelledError("Task {$tid} cancelled!"));
+          if ($cancelTask instanceof FiberInterface)
+            $coroutine->scheduleFiber($cancelTask);
+          else
+            $coroutine->schedule($cancelTask);
+
           $task->sendValue(true);
           $coroutine->schedule($task);
         } else {
-          throw new InvalidArgumentException($errorMessage);
+          throw new InvalidArgumentException($errorMessage . ' ' . $tid);
         }
       }
     );
@@ -307,7 +323,8 @@ final class Kernel
    * Block/sleep for delay seconds.
    * Suspends the calling task, allowing other tasks to run.
    *
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#sleeping
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#sleeping
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L593
    *
    * @param float $delay
    * @param mixed $result - If provided, it is returned to the caller when the coroutine complete
@@ -648,6 +665,7 @@ final class Kernel
    * Other awaitables in the sequence won't be cancelled and will continue to run.
    *
    * @see https://docs.python.org/3.7/library/asyncio-task.html#asyncio.gather
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L678
    *
    * @param int|array $taskId
    * @return array[] associative `$taskId` => `$result`
@@ -950,7 +968,8 @@ final class Kernel
   /**
    * Wait for the callable to complete with a timeout.
    *
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#timeouts
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#timeouts
+   * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L392
    *
    * @param callable $callable
    * @param float $timeout
@@ -967,7 +986,8 @@ final class Kernel
 
         $coroutine->addTimeout(function () use ($taskId, $timeout, $task, $coroutine) {
           if (!empty($timeout)) {
-            $coroutine->cancelTask($taskId);
+            $cancelTask = $coroutine->taskInstance($taskId);
+            $cancelTask->setException(new CancelledError("Task {$taskId} cancelled!"));
             $task->setException(new TimeoutError($timeout));
             $coroutine->schedule($task);
           } else {
@@ -1026,6 +1046,9 @@ final class Kernel
       case 'sleep':
         [$delay, $result] = $arguments;
         return yield Kernel::sleepFor($delay, $result);
+      case 'spawn':
+        $async = \array_shift($arguments);
+        return yield Kernel::spawner($async, ...$arguments);
         // case '':
         //   [] = $arguments;
     }
@@ -1056,10 +1079,29 @@ final class Kernel
   }
 
   /**
+   * **Schedule** an `async`, a coroutine _function_ for execution.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @see https://curio.readthedocs.io/en/latest/reference.html#tasks
+   * @see https://docs.python.org/3.7/library/asyncio-task.html#asyncio.create_task
+   *
+   * @param generator|callable|string $async - a coroutine, or a function to make `awaitable`
+   * @param mixed ...$args - if **$async** is `Generator`, **$args** can hold `customState`, and `customData`
+   * - for third party code integration.
+   *
+   * @return int $task id
+   */
+  public static function spawner($async, ...$arg)
+  {
+    return Kernel::away($async, ...$arg);
+  }
+
+  /**
    * Add/schedule an `yield`-ing `function/callable/task` for execution.
    * - This function needs to be prefixed with `yield`
    *
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#asyncio.create_task
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#creating-tasks
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
    *
    * @param generator|callable|string $label
    * @param mixed ...$args - if **$label** is `Generator`, $args can hold `customState`, and `customData`

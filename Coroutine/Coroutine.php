@@ -29,6 +29,7 @@ use Async\FiberInterface;
  * The Scheduler
  *
  * @see https://docs.python.org/3/library/asyncio-task.html#coroutines
+ * @see https://curio.readthedocs.io/en/latest/reference.html#coroutines
  */
 final class Coroutine implements CoroutineInterface
 {
@@ -575,7 +576,7 @@ final class Coroutine implements CoroutineInterface
     $this->close();
   }
 
-  public function cancelTask(int $tid, $customState = null)
+  public function cancelTask(int $tid, $customState = null, string $errorMessage = 'Invalid task ID!')
   {
     if (!isset($this->taskMap[$tid])) {
       return false;
@@ -643,7 +644,7 @@ final class Coroutine implements CoroutineInterface
     return $this->completedMap;
   }
 
-  public function taskInstance(int $taskId = 0): ?TaskInterface
+  public function taskInstance(int $taskId = 0)
   {
     $taskList = $this->currentTask();
 
@@ -768,7 +769,9 @@ final class Coroutine implements CoroutineInterface
           continue;
         }
 
-        if ($task->isFinished()) {
+        if ($task->isCancelled()) {
+          $this->cancelTask($task->taskId());
+        } elseif ($task->isFinished()) {
           $this->cancelProgress($task);
           $id = $task->taskId();
           if ($task->isNetwork()) {

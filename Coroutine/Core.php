@@ -184,6 +184,7 @@ if (!\function_exists('coroutine_run')) {
    * - This function is used by `away()` and others, shouldn't really be called directly.
    *
    * @see https://docs.python.org/3.7/library/asyncio-task.html#awaitables
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L638
    *
    * @param Generator|callable $awaitableFunction
    * @param mixed $args
@@ -202,7 +203,8 @@ if (!\function_exists('coroutine_run')) {
    * Suspends the calling task, allowing other tasks to run.
    * - This function needs to be prefixed with `yield`
    *
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#sleeping
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#sleeping
+   * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L593
    *
    * @param float $delay
    * @param mixed $result - If provided, it is returned to the caller when the coroutine complete
@@ -273,7 +275,8 @@ if (!\function_exists('coroutine_run')) {
    * Wait for the callable to complete with a timeout.
    * - This function needs to be prefixed with `yield`
    *
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#timeouts
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#timeouts
+   * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L392
    *
    * @param callable $callable
    * @param float $timeout
@@ -287,7 +290,15 @@ if (!\function_exists('coroutine_run')) {
    * kill/remove an task using task id.
    * Optionally pass custom cancel state and error message for third party code integration.
    *
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#asyncio.Task.cancel
+   * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L181
+   *
    * - This function needs to be prefixed with `yield`
+   * @param int $tid
+   * @param mixed $customState
+   * @return bool
+   *
+   * @throws \InvalidArgumentException
    */
   function cancel_task(int $tid, $customState = null, string $errorMessage = 'Invalid task ID!')
   {

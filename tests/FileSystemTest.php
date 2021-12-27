@@ -35,6 +35,7 @@ use function Async\Path\{
 
 use Async\FileSystem;
 use Async\Exceptions\Panic;
+use Async\Exceptions\CancelledError;
 use PHPUnit\Framework\TestCase;
 
 class FileSystemTest extends TestCase
@@ -553,7 +554,8 @@ class FileSystemTest extends TestCase
         });
 
         $result = yield \gather_wait([$watchTask], 0, false);
-        $this->assertNull($result[$watchTask]);
+        $this->assertNotNull($result[$watchTask]);
+        $this->assertInstanceOf(CancelledError::class, $result[$watchTask]);
 
         yield file_delete('watching');
         yield \shutdown();
