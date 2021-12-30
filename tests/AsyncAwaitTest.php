@@ -11,7 +11,7 @@ class AsyncAwaitTest extends TestCase
 
     protected function setUp(): void
     {
-        \coroutine_clear();
+        \coroutine_clear(false);
     }
 
     public function taskAsyncPanickingSame()
@@ -127,7 +127,7 @@ class AsyncAwaitTest extends TestCase
     public function taskAwaitFileGetContents()
     {
         $this->result = null;
-        yield \away(function () {
+        yield \create_task(function () {
             $this->result = 0;
             while (true) {
                 $this->result++;

@@ -7,6 +7,11 @@ use PHPUnit\Framework\TestCase;
 
 class CoroutineCreateTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        \coroutine_clear(false);
+    }
+
     /**
      * @dataProvider testNoSendProvider
      */

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Async;
 
 use Fiber;
+use Async\Queue;
 use Async\Spawn\Globals;
 use Async\FiberInterface;
 
@@ -37,6 +38,18 @@ final class Co
   protected static $fibers;
 
   /**
+   * @var Queue[]
+   */
+  protected static $queues;
+
+  /**
+   * a task's staring and uniqueId numbers
+   *
+   * @var array[int]
+   */
+  protected static $uniqueId;
+
+  /**
    * @var \Closure[Generator]
    */
   protected static $functions;
@@ -49,6 +62,29 @@ final class Co
   public static function getLoop(): ?CoroutineInterface
   {
     return self::$instance;
+  }
+
+  public static function setUnique(string $tag, int $number): void
+  {
+    if (!isset(self::$uniqueId[$tag]) || $tag === 'max')
+      self::$uniqueId[$tag] = $number;
+  }
+
+  /**
+   * A task's starting unique Id number.
+   *
+   * @param string $tag Either:
+   * - `supervisor` task unique id, the event loop, or
+   * - `parent` unique task id, an async task `coroutine_run` executed
+   *
+   * @return integer|null
+   */
+  public static function getUnique(string $tag): ?int
+  {
+    if (isset(self::$uniqueId[$tag]))
+      return self::$uniqueId[$tag];
+
+    return null;
   }
 
   public static function addFiber(string $tag, $fiber): void
@@ -78,6 +114,29 @@ final class Co
   public static function clearFiber(string $tag): void
   {
     self::$fibers[$tag] = null;
+  }
+
+  public static function addQueue(string $tag, Queue $queue): void
+  {
+    if (self::isQueue($tag))
+      \panic("Queue named: '{$tag}' already exists!");
+
+    self::$queues[$tag] = $queue;
+  }
+
+  public static function isQueue(string $tag): bool
+  {
+    return isset(self::$queues[$tag]);
+  }
+
+  public static function getQueue(string $tag): ?Queue
+  {
+    return self::$queues[$tag];
+  }
+
+  public static function clearQueue(string $tag): void
+  {
+    self::$queues[$tag] = null;
   }
 
   public static function addFunction(string $label, \Closure $coroutine): void
@@ -145,6 +204,8 @@ final class Co
     self::$timer = null;
     self::$parallel = null;
     self::$fibers = null;
+    self::$queues = null;
+    self::$uniqueId = null;
 
     Globals::reset();
   }

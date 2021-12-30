@@ -252,6 +252,7 @@ final class Coroutine implements CoroutineInterface
    */
   public function __construct()
   {
+    $this->maxTaskId = Co::getUnique('dirty') === 1 ? Co::getUnique('max') : \random_int(10000, 9999999999);
     Co::reset();
     Co::setLoop($this);
     $this->initSignals();
@@ -488,6 +489,11 @@ final class Coroutine implements CoroutineInterface
     $task = new Task($tid, $coroutine);
     $this->taskMap[$tid] = $task;
     $this->schedule($task);
+    if (Co::getUnique('parent') === null && \count($this->taskMap) === 1)
+      Co::setUnique('parent', $tid);
+    elseif (Co::getUnique('supervisor') === null && \count($this->taskMap) === 2)
+      Co::setUnique('supervisor', $tid);
+
     return $tid;
   }
 
@@ -500,6 +506,11 @@ final class Coroutine implements CoroutineInterface
   {
     $tid = ++$this->maxTaskId;
     $this->taskMap[$tid] = $fiber;
+    if (Co::getUnique('parent') === null && \count($this->taskMap) === 1)
+      Co::setUnique('parent', $tid);
+    elseif (Co::getUnique('supervisor') === null && \count($this->taskMap) === 2)
+      Co::setUnique('supervisor', $tid);
+
     return $tid;
   }
 
@@ -550,8 +561,11 @@ final class Coroutine implements CoroutineInterface
     }
   }
 
-  public function shutdown(int $skipTask = 1)
+  public function shutdown(?int $skipTask = 1)
   {
+    if ($skipTask === 1)
+      $skipTask = Co::getUnique('parent');
+
     if (!empty($this->future))
       $this->future->stopAll();
 
@@ -644,7 +658,7 @@ final class Coroutine implements CoroutineInterface
     return $this->completedMap;
   }
 
-  public function taskInstance(int $taskId = 0)
+  public function taskInstance(?int $taskId = 0)
   {
     $taskList = $this->currentTask();
 
@@ -772,6 +786,13 @@ final class Coroutine implements CoroutineInterface
         if ($task->isCancelled()) {
           $this->cancelTask($task->taskId());
         } elseif ($task->isFinished()) {
+          if ($task->isCustomState('joined')) {
+            $unjoined = $task->getCustomData();
+            $task->customData();
+            $task->customState('unjoined');
+            $this->schedule($unjoined);
+          }
+
           $this->cancelProgress($task);
           $id = $task->taskId();
           if ($task->isNetwork()) {

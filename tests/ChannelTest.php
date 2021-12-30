@@ -11,7 +11,7 @@ class ChannelTest extends TestCase
 
     protected function setUp(): void
     {
-        \coroutine_clear();
+        \coroutine_clear(false);
     }
 
     public function taskSenderMain(Channel $channel)

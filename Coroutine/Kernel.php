@@ -225,7 +225,7 @@ final class Kernel
    * kill/remove an task using task id.
    * Optionally pass custom cancel state and error message for third party code integration.
    *
-   * @see https://docs.python.org/3.9/library/asyncio-task.html#asyncio.Task.cancel
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#asyncio.Task.cancel
    * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L181
    *
    * @param int $tid
@@ -259,6 +259,22 @@ final class Kernel
     );
   }
 
+  public static function joinTask(int $tid)
+  {
+    return new Kernel(
+      function (TaskInterface $task, CoroutineInterface $coroutine) use ($tid) {
+        $join = $coroutine->taskInstance($tid);
+        if (!\is_null($join)) {
+          $join->customState('joined');
+          $join->customData($task);
+          $coroutine->schedule($join);
+        } else {
+          $coroutine->schedule($task);
+        }
+      }
+    );
+  }
+
   /**
    * Performs a clean application exit and shutdown.
    *
@@ -272,6 +288,9 @@ final class Kernel
   {
     return new Kernel(
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($skipTask) {
+        if ($skipTask === 1)
+          $skipTask = Co::getUnique('parent');
+
         $returnTask = $coroutine->taskInstance($skipTask);
         $coroutine->shutdown($skipTask);
         if ($returnTask instanceof TaskInterface) {
@@ -1006,7 +1025,47 @@ final class Kernel
   }
 
   /**
-   * Makes an resolvable function from `label` name that's callable with `await` and `away`.
+   * Any blocking operation can be cancelled by a timeout.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param float $timeout
+   * @param Generator|callable $callable
+   * @return mixed
+   * @see https://curio.readthedocs.io/en/latest/reference.html#timeout_after
+   * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/time.py#L141
+   */
+  public static function timeoutAfter(float $timeout = 0.0, $callable)
+  {
+    return new Kernel(
+      function (TaskInterface $task, CoroutineInterface $coroutine) use ($callable, $timeout) {
+        if ($callable instanceof \Generator) {
+          $taskId = $coroutine->createTask($callable);
+        } else {
+          $taskId = $coroutine->createTask(\awaitAble($callable));
+        }
+
+        $coroutine->addTimeout(function () use ($taskId, $timeout, $task, $coroutine) {
+          if (!empty($timeout)) {
+            $coroutine->cancelTask($taskId);
+            $task->setException(new TimeoutError($timeout));
+            $coroutine->schedule($task);
+          } else {
+            $completeList = $coroutine->completedTask();
+            if (isset($completeList[$taskId])) {
+              $tasks = $completeList[$taskId];
+              $result = $tasks->result();
+              self::updateList($coroutine, $taskId, $completeList);
+              $task->sendValue($result);
+            }
+            $coroutine->schedule($task);
+          }
+        }, $timeout);
+      }
+    );
+  }
+
+  /**
+   * Makes an resolvable function from `label` name that's callable with `await`/`away`  and inturn calls **create_task**.
    * The passed in `function` is wrapped to be `awaitAble`.
    *
    * - This will store a closure in `Co` static class with supplied `label` name as key.
@@ -1019,7 +1078,7 @@ final class Kernel
   public static function async(string $label, callable $function): void
   {
     $closure = function (...$args) use ($function) {
-      return yield $function(...$args);;
+      return yield $function(...$args);
     };
 
     Co::addFunction($label, $closure);
@@ -1044,13 +1103,12 @@ final class Kernel
   {
     switch ($label) {
       case 'sleep':
-        [$delay, $result] = $arguments;
-        return yield Kernel::sleepFor($delay, $result);
+        return yield Kernel::sleepFor(...$arguments);
       case 'spawn':
         $async = \array_shift($arguments);
-        return yield Kernel::spawner($async, ...$arguments);
-        // case '':
-        //   [] = $arguments;
+        return yield Kernel::away($async, ...$arguments);
+      case 'gather':
+        return yield Kernel::gather(...$arguments);
     }
 
     if (Co::isFunction($label)) {
@@ -1083,27 +1141,10 @@ final class Kernel
    * - This function needs to be prefixed with `yield`
    *
    * @see https://curio.readthedocs.io/en/latest/reference.html#tasks
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#asyncio.create_task
-   *
-   * @param generator|callable|string $async - a coroutine, or a function to make `awaitable`
-   * @param mixed ...$args - if **$async** is `Generator`, **$args** can hold `customState`, and `customData`
-   * - for third party code integration.
-   *
-   * @return int $task id
-   */
-  public static function spawner($async, ...$arg)
-  {
-    return Kernel::away($async, ...$arg);
-  }
-
-  /**
-   * Add/schedule an `yield`-ing `function/callable/task` for execution.
-   * - This function needs to be prefixed with `yield`
-   *
-   * @see https://docs.python.org/3.9/library/asyncio-task.html#creating-tasks
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#creating-tasks
    * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
    *
-   * @param generator|callable|string $label
+   * @param generator|callable|string $label - `async`, a coroutine, or a function to make `awaitable`
    * @param mixed ...$args - if **$label** is `Generator`, $args can hold `customState`, and `customData`
    * - for third party code integration.
    *

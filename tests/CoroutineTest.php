@@ -12,7 +12,7 @@ class CoroutineTest extends TestCase
 
     protected function setUp(): void
     {
-        \coroutine_clear();
+        \coroutine_clear(false);
     }
 
     public function task1()

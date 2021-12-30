@@ -16,7 +16,7 @@ class SignalerTest extends TestCase
                 );
         }
 
-        \coroutine_clear();
+        \coroutine_clear(false);
     }
 
     public function testEmittedEventsAndCallHandling()

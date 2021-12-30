@@ -54,6 +54,7 @@ final class Queue
   public function __construct(int $maxsize = 0)
   {
     $this->max_size = $maxsize;
+    $this->finished = true;
     $this->queue =  new \SplQueue();
   }
 
@@ -116,12 +117,11 @@ final class Queue
    */
   public function put($item)
   {
-    $putter = yield \get_task();
     while ($this->full()) {
       try {
         yield;
       } catch (\Throwable $e) {
-        yield \cancel_task($putter);
+        yield \kill_task();
         throw $e;
       }
     }
@@ -143,6 +143,7 @@ final class Queue
 
     $this->_put($item);
     $this->unfinished_tasks++;
+    $this->finished = false;
   }
 
   /**
@@ -156,12 +157,11 @@ final class Queue
    */
   public function get()
   {
-    $getter = yield \get_task();
     while ($this->empty()) {
       try {
         yield;
       } catch (\Throwable $e) {
-        yield \cancel_task($getter);
+        yield \kill_task();
         throw $e;
       }
     }
@@ -223,12 +223,12 @@ final class Queue
    */
   public function join()
   {
+    $yielding = $this->unfinished_tasks;
     if ($this->unfinished_tasks > 0) {
       while (!$this->finished) {
-        yield;
+        foreach (\range(0, $yielding) as $nan)
+          yield;
       }
-
-      $this->finished = false;
     }
   }
 }

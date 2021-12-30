@@ -21,7 +21,7 @@ class KernelTest extends TestCase
 
     protected function setUp(): void
     {
-        \coroutine_clear();
+        \coroutine_clear(false);
     }
 
     protected function controller()

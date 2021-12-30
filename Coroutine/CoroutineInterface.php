@@ -63,7 +63,7 @@ interface CoroutineInterface
    * - The calling `$skipTask` task id will not get cancelled, the script execution will return to.
    * - Use `getTask()` to retrieve caller's task id.
    */
-  public function shutdown(int $skipTask = 1);
+  public function shutdown(?int $skipTask = 1);
 
   /**
    * Reset all `Coroutine` data.
@@ -225,7 +225,7 @@ interface CoroutineInterface
    *
    * @return null|TaskInterface|FiberInstance
    */
-  public function taskInstance(int $taskId = 0);
+  public function taskInstance(?int $taskId = 0);
 
   /**
    * Add callable for parallel processing, in an separate php process

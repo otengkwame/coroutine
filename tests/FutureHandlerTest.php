@@ -16,7 +16,7 @@ class FutureHandlerTest extends TestCase
 
     protected function setUp(): void
     {
-        \coroutine_clear();
+        \coroutine_clear(false);
     }
 
     public function childTask()

@@ -10,6 +10,8 @@ require 'vendor/autoload.php';
 use Async\Fiber;
 use Async\ReflectionFiber;
 
+\coroutine_clear(false);
+
 function main()
 {
 

@@ -51,7 +51,7 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * Makes an resolvable function from `label` name that's callable with `await` and `away`.
+   * Makes an resolvable function from `label` name that's callable with `await`/`away` and inturn calls **create_task**.
    * The passed in `function` is wrapped to be `awaitAble`.
    *
    * - This will store a closure in `Co` static class with supplied `label` name as key.
@@ -112,14 +112,14 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * Add/schedule an `yield`-ing `function/callable/task` for background execution.
-   * Will immediately return an `int`, and continue to the next instruction.
-   *
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#asyncio.create_task
-   *
+   * **Schedule** an `async`, a coroutine _function_ for execution.
    * - This function needs to be prefixed with `yield`
    *
-   * @param Generator|callable|string $awaitableFunction
+   * @see https://curio.readthedocs.io/en/latest/reference.html#tasks
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#creating-tasks
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
+   *
+   * @param Generator|callable|string $awaitableFunction - `async`, a coroutine, or a function to make `awaitable`
    * @param mixed ...$args - if **$awaitableFunction** is `Generator`, $args can hold `customState`, and `customData`
    * - for third party code integration.
    *
@@ -215,70 +215,13 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * Creates an communications Channel between coroutines.
-   * Similar to Google Go language - basic, still needs additional functions
-   * - This function needs to be prefixed with `yield`
-   *
-   * @return Channel $channel
-   */
-  function make()
-  {
-    return Kernel::make();
-  }
-
-  /**
-   * Send message to an Channel
-   * - This function needs to be prefixed with `yield`
-   *
-   * @param Channel $channel
-   * @param mixed $message
-   * @param int $taskId override send to different task, not set by `receiver()`
-   */
-  function sender(Channel $channel, $message = null, int $taskId = 0)
-  {
-    $noResult = yield Kernel::sender($channel, $message, $taskId);
-    yield;
-    return $noResult;
-  }
-
-  /**
-   * Set task as Channel receiver, and wait to receive Channel message
-   * - This function needs to be prefixed with `yield`
-   *
-   * @param Channel $channel
-   */
-  function receiver(Channel $channel)
-  {
-    yield Kernel::receiver($channel);
-    $message = yield Kernel::receive($channel);
-    return $message;
-  }
-
-  /**
-   * A goroutine is a function that is capable of running concurrently with other functions.
-   * To create a goroutine we use the keyword `go` followed by a function invocation
-   * - This function needs to be prefixed with `yield`
-   *
-   * @see https://www.golang-book.com/books/intro/10#section1
-   *
-   * @param Generator|callable|string $function
-   * @param mixed $args - if `generator`, $args can hold `customState`, and `customData`
-   *
-   * @return int task id
-   */
-  function go($function, ...$args)
-  {
-    return Kernel::away($function, ...$args);
-  }
-
-  /**
    * Wait for the callable to complete with a timeout.
    * - This function needs to be prefixed with `yield`
    *
    * @see https://docs.python.org/3.9/library/asyncio-task.html#timeouts
    * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L392
    *
-   * @param callable $callable
+   * @param Generator|callable $callable
    * @param float $timeout
    */
   function wait_for($callable, float $timeout = 0.0)
@@ -287,13 +230,54 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * kill/remove an task using task id.
-   * Optionally pass custom cancel state and error message for third party code integration.
+   * Any blocking operation can be cancelled by a timeout.
+   * - This function needs to be prefixed with `yield`
    *
-   * @see https://docs.python.org/3.9/library/asyncio-task.html#asyncio.Task.cancel
-   * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L181
+   * @param float $timeout
+   * @param Generator|callable $callable
+   * @return mixed
+   * @see https://curio.readthedocs.io/en/latest/reference.html#timeout_after
+   * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/time.py#L141
+   */
+  function timeout_after(float $timeout = 0.0, $callable)
+  {
+    return Kernel::timeoutAfter($timeout, $callable);
+  }
+
+  /**
    *
    * - This function needs to be prefixed with `yield`
+   *
+   * @param integer $tid
+   * @return void
+   */
+  function join_task(int $tid)
+  {
+    return Kernel::joinTask($tid);
+  }
+
+  /**
+   * Create an new task.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#creating-tasks
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
+   *
+   * @return int task ID
+   */
+  function create_task($awaitableFunction, ...$args)
+  {
+    return \away($awaitableFunction, ...$args);
+  }
+
+  /**
+   * kill/remove an task using task id.
+   * Optionally pass custom cancel state and error message for third party code integration.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#asyncio.Task.cancel
+   * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L181
+   *
    * @param int $tid
    * @param mixed $customState
    * @return bool
@@ -315,21 +299,6 @@ if (!\function_exists('coroutine_run')) {
   {
     $currentTask = yield Kernel::getTask();
     return yield Kernel::cancelTask($currentTask, $customState);
-  }
-
-  /**
-   * Performs a clean application exit and shutdown.
-   * - This function needs to be prefixed with `yield`
-   *
-   * Provide $skipTask incase called by an Signal Handler.
-   *
-   * @param int $skipTask - Defaults to the main parent task.
-   * - The calling `$skipTask` task id will not get cancelled, the script execution will return to.
-   * - Use `getTask()` to retrieve caller's task id.
-   */
-  function shutdown(int $skipTask = 1)
-  {
-    return Kernel::shutdown($skipTask);
   }
 
   /**
@@ -356,6 +325,21 @@ if (!\function_exists('coroutine_run')) {
   function stateless_task()
   {
     return Kernel::statelessTask();
+  }
+
+  /**
+   * Performs a clean application exit and shutdown.
+   * - This function needs to be prefixed with `yield`
+   *
+   * Provide $skipTask incase called by an Signal Handler.
+   *
+   * @param int $skipTask - Defaults to the main parent task.
+   * - The calling `$skipTask` task id will not get cancelled, the script execution will return to.
+   * - Use `getTask()` to retrieve caller's task id.
+   */
+  function shutdown(int $skipTask = 1)
+  {
+    return Kernel::shutdown($skipTask);
   }
 
   /**
@@ -433,7 +417,17 @@ if (!\function_exists('coroutine_run')) {
     return Co::getLoop();
   }
 
-  function coroutine_clear(): void
+  /**
+   * Reset all `Coroutine` **global/static** `Co` variable data, including `async` functions defined.
+   * Can also setup a task's unique `starting` id. This is mainly used for testing only.
+   *
+   * @param boolean $unique
+   * @param integer $starting - Set a fixed starting number, otherwise creates a cryptographically secure integer
+   * @return void
+   *
+   * @codeCoverageIgnore
+   */
+  function coroutine_clear(bool $unique = true, int $starting = 0): void
   {
     $coroutine = Co::getLoop();
     if ($coroutine instanceof CoroutineInterface) {
@@ -442,6 +436,8 @@ if (!\function_exists('coroutine_run')) {
 
     Co::reset();
     Co::resetAsync();
+    Co::setUnique('dirty', 1);
+    Co::setUnique('max', ($unique ? \random_int(10000, 9999999999) : $starting));
   }
 
   function coroutine_create(\Generator $routine = null): CoroutineInterface
@@ -461,7 +457,7 @@ if (!\function_exists('coroutine_run')) {
    * finalizing asynchronous generators. It should be used as a main entry point for programs, and
    * should ideally only be called once.
    *
-   * @see https://docs.python.org/3.8/library/asyncio-task.html#asyncio.run
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#asyncio.run
    *
    * @param generator|string $routine **main** `coroutine` or `async` function.
    * @param mixed ...$args if **routine** is `async` function.
@@ -476,6 +472,63 @@ if (!\function_exists('coroutine_run')) {
       \coroutine_create($routine)->run();
     else
       \panic("Invalid `coroutine` or no `async` function found!");
+  }
+
+  /**
+   * Creates an communications Channel between coroutines.
+   * Similar to Google Go language - basic, still needs additional functions
+   * - This function needs to be prefixed with `yield`
+   *
+   * @return Channel $channel
+   */
+  function make()
+  {
+    return Kernel::make();
+  }
+
+  /**
+   * Send message to an Channel
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param Channel $channel
+   * @param mixed $message
+   * @param int $taskId override send to different task, not set by `receiver()`
+   */
+  function sender(Channel $channel, $message = null, int $taskId = 0)
+  {
+    $noResult = yield Kernel::sender($channel, $message, $taskId);
+    yield;
+    return $noResult;
+  }
+
+  /**
+   * Set task as Channel receiver, and wait to receive Channel message
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param Channel $channel
+   */
+  function receiver(Channel $channel)
+  {
+    yield Kernel::receiver($channel);
+    $message = yield Kernel::receive($channel);
+    return $message;
+  }
+
+  /**
+   * A goroutine is a function that is capable of running concurrently with other functions.
+   * To create a goroutine we use the keyword `go` followed by a function invocation
+   * - This function needs to be prefixed with `yield`
+   *
+   * @see https://www.golang-book.com/books/intro/10#section1
+   *
+   * @param Generator|callable|string $function
+   * @param mixed $args - if `generator`, $args can hold `customState`, and `customData`
+   *
+   * @return int task id
+   */
+  function go($function, ...$args)
+  {
+    return Kernel::away($function, ...$args);
   }
 
   /**

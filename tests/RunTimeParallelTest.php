@@ -12,7 +12,7 @@ class RunTimeParallelTest extends TestCase
         if (!\function_exists('uv_loop_new'))
             $this->markTestSkipped('Test skipped "uv_loop_new" missing.');
 
-        \coroutine_clear();
+        \coroutine_clear(false);
     }
 
     public function testShowing_future_as_return_value()
