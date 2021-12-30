@@ -14,6 +14,12 @@
     <filter>
         <whitelist>
             <directory suffix=".php">Coroutine/</directory>
+            <exclude>
+                <file>./Coroutine/Fiber/Original/Fiber.php</file>
+                <file>./Coroutine/Fiber/Original/FiberError.php</file>
+                <file>./Coroutine/Fiber/Original/FiberExit.php</file>
+                <file>./Coroutine/Fiber/Original/ReflectionFiber.php</file>
+            </exclude>
         </whitelist>
     </filter>
 
