@@ -149,6 +149,29 @@ interface TaskInterface
 
   public function isFinished(): bool;
 
+  /**
+   * Does `Task` hold another _task_ to **schedule** on completion.
+   * @return bool
+   *
+   * @internal
+   */
+  public function hasCaller(): bool;
+
+  /**
+   * @param TaskInterface|FiberInterface|null $taskFiber
+   * @return void
+   *
+   * @internal
+   */
+  public function setCaller($taskFiber = null): void;
+
+  /**
+   * @return TaskInterface|FiberInterface
+   *
+   * @internal
+   */
+  public function getCaller();
+
   public function setResult($value): void;
 
   /**

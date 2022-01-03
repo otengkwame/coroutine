@@ -203,12 +203,12 @@ final class Fiber implements FiberInterface
         $this->state = $status;
     }
 
-    public function setTaskFiber($taskFiber)
+    public function setCaller($taskFiber)
     {
         $this->taskFiber = $taskFiber;
     }
 
-    public function getTaskFiber()
+    public function getCaller()
     {
         return $this->taskFiber;
     }

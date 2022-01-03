@@ -244,10 +244,9 @@ final class Kernel
           if (!empty($customState))
             $cancelTask->customState($customState);
 
-          if ($cancelTask->isCustomState('joined')) {
-            $cancelTask->customState('unjoined');
-            $unjoined = $cancelTask->getCustomData();
-            $cancelTask->customData();
+          if ($cancelTask->hasCaller()) {
+            $unjoined = $cancelTask->getCaller();
+            $cancelTask->setCaller();
             $cid = $cancelTask->taskId();
             $unjoined->setException(new CancelledError("Task {$cid}!"));
             $coroutine->schedule($unjoined);
@@ -274,8 +273,7 @@ final class Kernel
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($tid) {
         $join = $coroutine->getTask($tid);
         if (!\is_null($join)) {
-          $join->customState('joined');
-          $join->customData($task);
+          $join->setCaller($task);
           $coroutine->schedule($join);
         } else {
           $coroutine->schedule($task);
@@ -1013,7 +1011,7 @@ final class Kernel
    * @see https://curio.readthedocs.io/en/latest/reference.html#timeout_after
    * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/time.py#L141
    */
-  public static function timeoutAfter(float $timeout = 0.0, $callable, ...$args)
+  public static function timeoutAfter(float $timeout, $callable, ...$args)
   {
     return new Kernel(
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($callable, $timeout, $args) {
@@ -1177,7 +1175,7 @@ final class Kernel
     return new Kernel(
       function (FiberInterface $fiber, CoroutineInterface $coroutine) use ($data) {
         $fiber->setState('suspended');
-        $suspendTo = $fiber->getTaskFiber();
+        $suspendTo = $fiber->getCaller();
         $suspendTo->sendValue($data);
         $coroutine->isFiber($suspendTo)
           ? $coroutine->scheduleFiber($suspendTo)
@@ -1190,7 +1188,7 @@ final class Kernel
   {
     return new Kernel(
       function ($caller, CoroutineInterface $coroutine) use ($fiber) {
-        $fiber->setTaskFiber($caller);
+        $fiber->setCaller($caller);
         $coroutine->scheduleFiber($fiber);
       }
     );
@@ -1201,7 +1199,7 @@ final class Kernel
     return new Kernel(
       function ($caller, CoroutineInterface $coroutine) use ($fiber, $data) {
         $fiber->setState('rescheduled');
-        $fiber->setTaskFiber($caller);
+        $fiber->setCaller($caller);
         $fiber->sendValue($data);
         $coroutine->scheduleFiber($fiber);
       }
@@ -1213,7 +1211,7 @@ final class Kernel
     return new Kernel(
       function ($caller, CoroutineInterface $coroutine) use ($fiber, $exception) {
         $fiber->setState('erred');
-        $fiber->setTaskFiber($caller);
+        $fiber->setCaller($caller);
         $fiber->setException($exception);
         $coroutine->scheduleFiber($fiber);
       }

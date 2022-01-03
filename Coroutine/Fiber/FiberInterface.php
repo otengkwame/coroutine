@@ -125,14 +125,14 @@ interface FiberInterface
      *
      * @internal
      */
-    public function setTaskFiber($taskFiber);
+    public function setCaller($taskFiber);
 
     /**
      * @return TaskInterface|FiberInterface|null
      *
      * @internal
      */
-    public function getTaskFiber();
+    public function getCaller();
 
     /**
      * Mark the fiber as done and set an exception.

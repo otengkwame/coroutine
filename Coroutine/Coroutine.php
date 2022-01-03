@@ -746,7 +746,7 @@ final class Coroutine implements CoroutineInterface
     try {
       $value = $fiber->run();
     } catch (\Throwable $error) {
-      $returning = $fiber->getTaskFiber();
+      $returning = $fiber->getCaller();
       $returning->setState('erred');
       $returning->setException($error);
       $this->isFiber($returning)
@@ -770,7 +770,7 @@ final class Coroutine implements CoroutineInterface
     if ($fiber->isFinished()) {
       $fiber->setState('completed');
       $id = $fiber->fiberId();
-      $returning = $fiber->getTaskFiber();
+      $returning = $fiber->getCaller();
       $this->isFiber($returning)
         ? $this->scheduleFiber($returning)
         : $this->schedule($returning);
@@ -824,12 +824,11 @@ final class Coroutine implements CoroutineInterface
             $task->close();
           } else {
             $task->setState('completed');
-            if ($task->isCustomState('joined')) {
-              $unjoined = $task->getCustomData();
-              $task->customData();
+            if ($task->hasCaller()) {
+              $unjoined = $task->getCaller();
+              $task->setCaller();
               $result = $task->result();
               $unjoined->sendValue($result);
-              $task->customState('unjoined');
               $this->schedule($unjoined);
             } else {
               $this->completedMap[$id] = $task;

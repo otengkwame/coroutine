@@ -89,6 +89,8 @@ array(13) {
 %S    NULL
 %S    ["sendValue":protected]=>
 %S    NULL
+%S    ["caller":protected]=>
+%S    NULL
 %S    ["beforeFirstYield":protected]=>
 %S    bool(false)
 %S    ["error":protected]=>

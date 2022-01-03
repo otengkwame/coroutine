@@ -273,7 +273,7 @@ if (!\function_exists('coroutine_run')) {
    * @see https://curio.readthedocs.io/en/latest/reference.html#timeout_after
    * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/time.py#L141
    */
-  function timeout_after(float $timeout = 0.0, $callable, ...$args)
+  function timeout_after(float $timeout, $callable, ...$args)
   {
     return Kernel::timeoutAfter($timeout, $callable, ...$args);
   }

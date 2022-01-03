@@ -6,19 +6,21 @@ namespace Async;
 
 use Async\Coroutine;
 use Async\TaskInterface;
+use Async\FiberInterface;
 use Async\Spawn\FutureInterface;
 use Async\Exceptions\CancelledError;
 use Async\Exceptions\InvalidStateError;
 
 /**
  * Task is used to schedule coroutines concurrently.
- * When a coroutine is wrapped into a Task with functions like __createTask()__, __away()__ or __await('spawn')__
+ * When a coroutine is wrapped into a Task with functions like __create_task__, __away__, __spawner__, or __await(spawn)__
  * the coroutine is automatically scheduled to run soon.
  *
  * This Task class can also be seen to operate like an Fiber according to the RFC spec https://wiki.php.net/rfc/fiber
  *
  * @see https://curio.readthedocs.io/en/latest/reference.html#tasks
  * @source https://github.com/dabeaz/curio/blob/master/curio/task.py#L93
+ * @source https://github.com/python/cpython/blob/576e38f9db61ca09ca6dc57ad13b02a7bf9d370a/Lib/asyncio/tasks.py
  */
 final class Task implements TaskInterface
 {
@@ -73,6 +75,13 @@ final class Task implements TaskInterface
    */
   protected $result;
   protected $sendValue = null;
+
+  /**
+   * For operations needing to keep track of the calling `Task`.
+   *
+   * @var TaskInterface|FiberInterface
+   */
+  protected $caller = null;
 
   protected $beforeFirstYield = true;
 
@@ -131,6 +140,7 @@ final class Task implements TaskInterface
     $this->cycles = 0;
     $this->coroutine = null;
     $this->state = 'closed';
+    $this->caller = null;
     $this->result = null;
     $this->sendValue = null;
     $this->beforeFirstYield = true;
@@ -271,6 +281,21 @@ final class Task implements TaskInterface
     return ($this->coroutine instanceof \Generator)
       ? !$this->coroutine->valid()
       : true;
+  }
+
+  public function hasCaller(): bool
+  {
+    return ($this->caller !== null);
+  }
+
+  public function setCaller($taskFiber = null): void
+  {
+    $this->caller = $taskFiber;
+  }
+
+  public function getCaller()
+  {
+    return $this->caller;
   }
 
   public function setResult($value): void
