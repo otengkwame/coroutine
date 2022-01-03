@@ -108,4 +108,11 @@ if (!\function_exists('queue_clear')) {
     if (Co::isQueue($tag))
       Co::clearQueue($tag);
   }
+
+  define('queue_clear', 'queue_clear');
+  define('queue_join', 'queue_join');
+  define('queue_done', 'queue_done');
+  define('queue_put', 'queue_put');
+  define('queue_get', 'queue_get');
+  define('create_queue', 'create_queue');
 }

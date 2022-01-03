@@ -106,13 +106,23 @@ class AsyncAwaitTest extends TestCase
             $this->assertEquals(2, $value);
         });
 
-        \coroutine_run('childTask', 2);
+        \coroutine_run(childTask, 2);
+    }
+
+    public function callableTask(int $value)
+    {
+        $this->assertEquals(12, $value);
+    }
+
+    public function testCoroutineRunCallable()
+    {
+        \coroutine_run([$this, 'callableTask'], 12);
     }
 
     public function taskAwaitSleep()
     {
         \timer_for('true');
-        $done = yield await('sleep', \random_uniform(1, 1), 'done sleeping');
+        $done = yield await(sleep, \random_uniform(1, 1), 'done sleeping');
         $t1 = \timer_for('true');
         $this->assertEquals('done sleeping', $done);
         $this->assertGreaterThan(.9, $t1);

@@ -640,7 +640,7 @@ final class Coroutine implements CoroutineInterface
     }
   }
 
-  public function currentTask(): ?array
+  public function currentList(): ?array
   {
     if (!isset($this->taskMap)) {
       return null;
@@ -649,7 +649,12 @@ final class Coroutine implements CoroutineInterface
     return $this->taskMap;
   }
 
-  public function completedTask(): ?array
+  public function getTask(?int $taskId = 0)
+  {
+    return isset($this->taskMap[$taskId]) ? $this->taskMap[$taskId] : null;
+  }
+
+  public function completedList(): ?array
   {
     if (!isset($this->completedMap)) {
       return null;
@@ -658,16 +663,42 @@ final class Coroutine implements CoroutineInterface
     return $this->completedMap;
   }
 
-  public function taskInstance(?int $taskId = 0)
+  public function isCompleted(int $tid): bool
   {
-    $taskList = $this->currentTask();
-
-    return isset($taskList[$taskId]) ? $taskList[$taskId] : null;
+    return !isset($this->completedMap[$tid]);
   }
 
-  public function updateCompletedTask($taskMap = [])
+  public function getCompleted(int $tid)
   {
-    $this->completedMap = $taskMap;
+    if (isset($this->completedMap[$tid]))
+      return $this->completedMap[$tid];
+  }
+
+
+  public function updateCompleted(
+    int $taskId,
+    array $completeList = [],
+    ?callable $onClear = null,
+    bool $cancel = false,
+    bool $forceUpdate = false
+  ): void {
+    if (isset($completeList[$taskId]) && \is_callable($onClear)) {
+      $onClear($completeList[$taskId]);
+    }
+
+    if ($cancel) {
+      $this->cancelTask($taskId);
+    } else {
+      if (empty($completeList) || $forceUpdate) {
+        $completeList = $this->completedList();
+      }
+
+      if (isset($completeList[$taskId])) {
+        unset($completeList[$taskId]);
+      }
+
+      $this->completedMap = $completeList;
+    }
   }
 
   public function ioStop()
@@ -786,12 +817,6 @@ final class Coroutine implements CoroutineInterface
         if ($task->isCancelled()) {
           $this->cancelTask($task->taskId());
         } elseif ($task->isFinished()) {
-          if ($task->isCustomState('joined')) {
-            $unjoined = $task->getCustomData();
-            $task->customData();
-            $task->customState('unjoined');
-            $this->schedule($unjoined);
-          }
 
           $this->cancelProgress($task);
           $id = $task->taskId();
@@ -799,7 +824,16 @@ final class Coroutine implements CoroutineInterface
             $task->close();
           } else {
             $task->setState('completed');
-            $this->completedMap[$id] = $task;
+            if ($task->isCustomState('joined')) {
+              $unjoined = $task->getCustomData();
+              $task->customData();
+              $result = $task->result();
+              $unjoined->sendValue($result);
+              $task->customState('unjoined');
+              $this->schedule($unjoined);
+            } else {
+              $this->completedMap[$id] = $task;
+            }
           }
 
           unset($this->taskMap[$id]);

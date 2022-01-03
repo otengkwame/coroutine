@@ -52,7 +52,7 @@ if (!\function_exists('coroutine_run')) {
 
   /**
    * Makes an resolvable function from `label` name that's callable with `await`/`away` and inturn calls **create_task**.
-   * The passed in `function` is wrapped to be `awaitAble`.
+   * The passed in `function` is wrapped to be `awaitAble`. The `label` will also call `Define()` and make that _name_ a **global** `constant`.
    *
    * - This will store a closure in `Co` static class with supplied `label` name as key.
    * @see https://docs.python.org/3.7/reference/compound_stmts.html#async-def
@@ -63,20 +63,29 @@ if (!\function_exists('coroutine_run')) {
    */
   function async(string $label, callable $function): void
   {
+    if (!\defined("$label"))
+      \define("$label", "$label");
+
     Kernel::async($label, $function);
   }
 
   /**
+   * Create a new task that concurrently executes the `async` function.
+   */
+  \define('create_task', 'create_task');
+
+  /**
    * This function will `pause` and execute the `label` function, with `arguments`,
-   * only functions created with `async` or a `PHP` builtin callable will work, anything else will throw `Panic` exception.
+   * only functions created with `async`, or some **reserved**,  or
+   * a `PHP` builtin callable will work, anything else will throw `Panic` exception.
    * If `label` is a `PHP` builtin _command/function_ it will execute asynchronously in a **child/subprocess**,
    * by `proc_open`, or `uv_spawn` if **libuv** is loaded.
    *
    * - This function needs to be prefixed with `yield`
    *
-   * @see https://docs.python.org/3.7/reference/expressions.html#await
+   * @see https://docs.python.org/3.10/reference/expressions.html#await
    *
-   * @param string $label `async` function or `PHP` builtin function.
+   * @param string $label `async` function, **reserved** or `PHP` builtin function.
    * @param mixed ...$args
    * @return mixed
    * @throws Panic if the **named** `label` function does not exists.
@@ -157,6 +166,11 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * Run awaitable objects in the tasks set concurrently and block until the condition specified by race.
+   */
+  \define('gather_wait', 'gather_wait');
+
+  /**
    * Run awaitable objects in the taskId sequence concurrently.
    * If any awaitable in taskId is a coroutine, it is automatically scheduled as a Task.
    *
@@ -177,6 +191,11 @@ if (!\function_exists('coroutine_run')) {
   {
     return Kernel::gather(...$taskId);
   }
+
+  /**
+   * Run awaitable objects in the taskId sequence concurrently.
+   */
+  \define('gather', 'gather');
 
   /**
    * Wrap the callable with `yield`, this insure the first attempt to execute will behave
@@ -215,6 +234,16 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * Suspends the calling task, allowing other tasks to run.
+   */
+  \define('sleep_for', 'sleep_for');
+
+  /**
+   * Suspends the calling task, allowing other tasks to run.
+   */
+  \define('sleep', 'sleep');
+
+  /**
    * Wait for the callable to complete with a timeout.
    * - This function needs to be prefixed with `yield`
    *
@@ -230,6 +259,11 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * Wait for the callable to complete with a timeout.
+   */
+  \define('wait_for', 'wait_for');
+
+  /**
    * Any blocking operation can be cancelled by a timeout.
    * - This function needs to be prefixed with `yield`
    *
@@ -239,13 +273,37 @@ if (!\function_exists('coroutine_run')) {
    * @see https://curio.readthedocs.io/en/latest/reference.html#timeout_after
    * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/time.py#L141
    */
-  function timeout_after(float $timeout = 0.0, $callable)
+  function timeout_after(float $timeout = 0.0, $callable, ...$args)
   {
-    return Kernel::timeoutAfter($timeout, $callable);
+    return Kernel::timeoutAfter($timeout, $callable, ...$args);
   }
 
   /**
+   * **Schedule** an `async`, a coroutine _function_ for execution.
+   * - This function needs to be prefixed with `yield`
    *
+   * @see https://curio.readthedocs.io/en/latest/reference.html#tasks
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#creating-tasks
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
+   *
+   * @param Generator|callable|string $awaitableFunction - `async`, a coroutine, or a function to make `awaitable`
+   * @param mixed ...$args - if **$awaitableFunction** is `Generator`, $args can hold `customState`, and `customData`
+   * - for third party code integration.
+   *
+   * @return int $task id
+   */
+  function spawner($awaitableFunction, ...$args)
+  {
+    return \away($awaitableFunction, ...$args);
+  }
+
+  /**
+   * **Schedule** an `async`, a coroutine _function_ for execution.
+   */
+  \define('spawn', 'spawn');
+
+  /**
+   * 	Wait for the task to terminate and return its result.
    * - This function needs to be prefixed with `yield`
    *
    * @param integer $tid
@@ -255,6 +313,16 @@ if (!\function_exists('coroutine_run')) {
   {
     return Kernel::joinTask($tid);
   }
+
+  /**
+   * 	Wait for the task to terminate and return its result.
+   */
+  \define('join_task', 'join_task');
+
+  /**
+   * 	Wait for the task to terminate and return its result.
+   */
+  \define('join', 'join');
 
   /**
    * Create an new task.
@@ -290,6 +358,17 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * kill/remove an task using task id.
+   */
+  \define('cancel_task', 'cancel_task');
+
+
+  /**
+   * kill/remove an task using task id.
+   */
+  \define('cancel', 'cancel');
+
+  /**
    * kill/remove the current running task.
    * Optionally pass custom `cancel` state for third party code integration.
    *
@@ -302,16 +381,31 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * kill/remove the current running task.
+   */
+  \define('kill_task', 'kill_task');
+
+  /**
+   * kill/remove the current running task.
+   */
+  \define('kill', 'kill');
+
+  /**
    * Returns the current context task ID
    *
    * - This function needs to be prefixed with `yield`
    *
    * @return int
    */
-  function get_task()
+  function current_task()
   {
     return Kernel::getTask();
   }
+
+  /**
+   * Returns the current context task ID.
+   */
+  \define('current_task', 'current_task');
 
   /**
    * Set current context Task to stateless `networked`, meaning not storing any return values or exceptions on completion.
@@ -326,6 +420,11 @@ if (!\function_exists('coroutine_run')) {
   {
     return Kernel::statelessTask();
   }
+
+  /**
+   * Set current context Task to stateless `networked`, meaning not storing any return values or exceptions on completion.
+   */
+  \define('stateless_task', 'stateless_task');
 
   /**
    * Performs a clean application exit and shutdown.
@@ -343,6 +442,11 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * Performs a clean application exit and shutdown.
+   */
+  \define('shutdown', 'shutdown');
+
+  /**
    * Wait on read stream socket to be ready read from,
    * optionally schedule current task to execute immediately/next.
    *
@@ -352,6 +456,11 @@ if (!\function_exists('coroutine_run')) {
   {
     return Kernel::readWait($stream, $immediately);
   }
+
+  /**
+   * Wait on read stream socket to be ready read from.
+   */
+  \define('read_wait', 'read_wait');
 
   /**
    * Wait on write stream socket to be ready to be written to,
@@ -365,6 +474,11 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * Wait on write stream socket to be ready to be written to.
+   */
+  \define('write_wait', 'write_wait');
+
+  /**
    * Wait on keyboard input.
    * Will not block other task on `Linux`, will continue other tasks until `enter` key is pressed,
    * Will block on Windows, once an key is typed/pressed, will continue other tasks `ONLY` if no key is pressed.
@@ -376,6 +490,11 @@ if (!\function_exists('coroutine_run')) {
   {
     return Coroutine::input($size, $error);
   }
+
+  /**
+   * Wait on keyboard input.
+   */
+  \define('input_wait', 'input_wait');
 
   /**
    * Return the `string` of a variable type, or does a check, compared with string of the `type`.
@@ -458,8 +577,10 @@ if (!\function_exists('coroutine_run')) {
    * should ideally only be called once.
    *
    * @see https://docs.python.org/3.10/library/asyncio-task.html#asyncio.run
+   * @see https://curio.readthedocs.io/en/latest/reference.html#basic-execution
+   * @source https://github.com/python/cpython/blob/3.10/Lib/asyncio/runners.py
    *
-   * @param generator|string $routine **main** `coroutine` or `async` function.
+   * @param generator|callable|string $routine **main** `coroutine` or `async` function.
    * @param mixed ...$args if **routine** is `async` function.
    * @throws Panic If **routine** not valid.
    */
@@ -467,6 +588,8 @@ if (!\function_exists('coroutine_run')) {
   {
     if (\is_string($routine) && Co::isFunction($routine))
       $routine = Co::getFunction($routine)(...$args);
+    elseif (\is_callable($routine))
+      $routine = \awaitable($routine, ...$args);
 
     if ($routine instanceof \Generator || empty($routine))
       \coroutine_create($routine)->run();

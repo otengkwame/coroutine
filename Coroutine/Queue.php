@@ -121,7 +121,11 @@ final class Queue
       try {
         yield;
       } catch (\Throwable $e) {
-        yield \kill_task();
+        try {
+          yield \kill_task();
+        } catch (\Throwable $other) {
+        }
+
         throw $e;
       }
     }
@@ -161,7 +165,11 @@ final class Queue
       try {
         yield;
       } catch (\Throwable $e) {
-        yield \kill_task();
+        try {
+          yield \kill_task();
+        } catch (\Throwable $other) {
+        }
+
         throw $e;
       }
     }

@@ -284,6 +284,7 @@ class QueueTest extends TestCase
         $this->results[] = 'not here';
       } catch (TimeoutError $e) {
         $this->results[] = 'consumer timeout';
+        yield shutdown();
       }
     });
 
@@ -310,6 +311,7 @@ class QueueTest extends TestCase
         $this->results[] = 'not here';
       } catch (TimeoutError $e) {
         $this->results[] = 'producer timeout';
+        yield shutdown();
       }
     });
 

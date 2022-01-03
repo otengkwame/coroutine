@@ -3,7 +3,7 @@ include 'vendor/autoload.php';
 
 // will create closure function in `Co` static class namespace with supplied name as key
 \async('childTask', function ($av = null) {
-    $tid = yield \get_task();
+    $tid = yield \current_task();
     while (true) {
         echo "Child task $tid still alive! $av\n";
         yield;
@@ -12,7 +12,7 @@ include 'vendor/autoload.php';
 
 function parentTask()
 {
-    $tid = yield \get_task();
+    $tid = yield \current_task();
     // have `away` access the created async closure functions
     $childTid = yield \away('childTask', 'using async() function');
 

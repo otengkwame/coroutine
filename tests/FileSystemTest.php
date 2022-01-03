@@ -494,8 +494,8 @@ class FileSystemTest extends TestCase
                 //if ($events & \UV::CHANGE)
                 //    $this->assertEmpty($filename);
             } elseif ($status < 0) {
-                $tid = yield \get_task();
-                $handle = \coroutine_instance()->taskInstance($tid)->getCustomData();
+                $tid = yield \current_task();
+                $handle = \coroutine_instance()->getTask($tid)->getCustomData();
                 $this->assertInstanceOf(\UVFsEvent::class, $handle);
                 yield \kill_task();
             }

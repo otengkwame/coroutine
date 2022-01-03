@@ -864,14 +864,14 @@ final class FileSystem
       return new Kernel(
         function (TaskInterface $task, CoroutineInterface $coroutine) use ($path, $monitorTask) {
           $fsEvent = null;
-          $changedTask = $coroutine->taskInstance($monitorTask);
+          $changedTask = $coroutine->getTask($monitorTask);
           if ($changedTask instanceof TaskInterface) {
             $coroutine->fsAdd();
             $fsEvent = \uv_fs_event_init(
               $coroutine->getUV(),
               $path,
               function ($rsc, $name, $event, $status) use ($monitorTask, $coroutine) {
-                $changedTask = $coroutine->taskInstance($monitorTask);
+                $changedTask = $coroutine->getTask($monitorTask);
                 if ($changedTask instanceof TaskInterface) {
                   $changedTask->sendValue([$name, $event, $status]);
                   $coroutine->schedule($changedTask);

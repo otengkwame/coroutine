@@ -149,6 +149,8 @@ interface TaskInterface
 
   public function isFinished(): bool;
 
+  public function setResult($value): void;
+
   /**
    * Return the result of the Task.
    *

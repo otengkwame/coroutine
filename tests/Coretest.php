@@ -16,7 +16,7 @@ class CoreTest extends TestCase
     public function childTask()
     {
         try {
-            $tid = yield \get_task();
+            $tid = yield \current_task();
             while (true) {
                 $this->task .= "Child task $tid still alive!\n";
                 yield;
@@ -27,7 +27,7 @@ class CoreTest extends TestCase
 
     public function parentTask()
     {
-        $tid = yield \get_task();
+        $tid = yield \current_task();
         $childTid = yield \away([$this, 'childTask']);
         $this->assertEquals('int', \is_type($childTid));
 

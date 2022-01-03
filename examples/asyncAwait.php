@@ -29,7 +29,7 @@ function repeat()
 function parentTask()
 {
     $rid = yield \away(\repeat());
-    $tid = yield \get_task();
+    $tid = yield \current_task();
     $child = yield \await('childTask', 'using async() function');
 
     echo "child returned: " . $child . \EOL;

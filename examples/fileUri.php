@@ -28,7 +28,7 @@ function get_statuses($websites)
 
 function get_website_status($url)
 {
-    $id = yield \get_task();
+    $id = yield \current_task();
     $fd = yield file_uri($url);
     $status = file_meta($fd, 'status');
     yield file_close($fd);

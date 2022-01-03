@@ -196,7 +196,7 @@ interface CoroutineInterface
    *
    * @return array|null
    */
-  public function currentTask(): ?array;
+  public function currentList(): ?array;
 
   /**
    * Return list of completed tasks, which the **results** has not been retrieved using `gather()`.
@@ -205,16 +205,46 @@ interface CoroutineInterface
    *
    * @return array|null
    */
-  public function completedTask(): ?array;
+  public function completedList(): ?array;
+
 
   /**
-   * Update completed tasks, used by `gather()`.
+   * Check `Id` among **completed** `Task` list.
    *
    * @internal
    *
+   * @param integer $tid
+   * @return boolean
+   */
+  public function isCompleted(int $tid): bool;
+
+  /**
+   * Return an completed `task` by `Id`.
+   *
+   * @param integer $tid
+   * @return FiberInterface|TaskInterface
+   */
+  public function getCompleted(int $tid);
+
+  /**
+   * Update _completed_ tasks list, and _current/running_ task, if cancelling the task.
+   *
+   * @internal
+   *
+   * @param integer $taskId a completed `task` Id.
+   * @param array $completeList already **modified** completed task list.
+   * @param callable|null $onClear optionally custom update function.
+   * @param boolean $cancel should the `task` be **killed/removed**.
+   * @param boolean $forceUpdate pull the completed list.
    * @return void
    */
-  public function updateCompletedTask();
+  public function updateCompleted(
+    int $taskId,
+    array $completeList = [],
+    ?callable $onClear = null,
+    bool $cancel = false,
+    bool $forceUpdate = false
+  ): void;
 
   /**
    * Return the `Task` instance reference by `int` task id.
@@ -225,7 +255,7 @@ interface CoroutineInterface
    *
    * @return null|TaskInterface|FiberInstance
    */
-  public function taskInstance(?int $taskId = 0);
+  public function getTask(?int $taskId = 0);
 
   /**
    * Add callable for parallel processing, in an separate php process

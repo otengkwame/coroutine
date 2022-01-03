@@ -32,7 +32,7 @@ function enqueue($index, $task)
         return \file_get_contents($task);
     });
 
-    $tid = yield \get_task();
+    $tid = yield \current_task();
     \printf("\nRead from %d, task %d: %d bytes\n", $index, $tid, \strlen($result));
     return $result;
 };

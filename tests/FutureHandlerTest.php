@@ -21,7 +21,7 @@ class FutureHandlerTest extends TestCase
 
     public function childTask()
     {
-        $childId = (yield \get_task());
+        $childId = (yield \current_task());
         $this->assertNotNull($childId);
         $this->childId = $childId;
 
@@ -45,7 +45,7 @@ class FutureHandlerTest extends TestCase
 
         yield \away($this->childTask());
         yield \away(function () {
-            yield yield shutdown(yield \get_task());
+            yield yield shutdown(yield \current_task());
         });
 
         $result = yield add_future(function () {

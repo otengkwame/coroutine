@@ -273,6 +273,11 @@ final class Task implements TaskInterface
       : true;
   }
 
+  public function setResult($value): void
+  {
+    $this->result = $value;
+  }
+
   public function result()
   {
     if ($this->isCompleted()) {

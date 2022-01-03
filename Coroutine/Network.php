@@ -75,7 +75,7 @@ final class Network
   {
     self::$isRunning[$listener] = false;
     $co = \coroutine_instance();
-    yield self::close($co->taskInstance($listener)->getCustomData());
+    yield self::close($co->getTask($listener)->getCustomData());
     try {
       yield \cancel_task($listener);
     } catch (\Throwable $e) {
@@ -199,13 +199,13 @@ final class Network
             return yield $handler($clientConnectionOrData);
           });
 
-          $co->taskInstance($newId)->taskType('networked');
+          $co->getTask($newId)->taskType('networked');
         }
       }
 
-      if ($co->taskInstance($callerID) instanceof TaskInterface) {
+      if ($co->getTask($callerID) instanceof TaskInterface) {
         $co->ioRemove();
-        $task = $co->taskInstance($callerID);
+        $task = $co->getTask($callerID);
         $task->sendValue(true);
         $co->schedule($task);
       }
@@ -227,7 +227,7 @@ final class Network
           $coroutine->ioAdd();
           if ($server instanceof \UVUdp) {
             \uv_udp_recv_start($server, function ($stream, $status, $data) use ($task, $coroutine, $listenerTask) {
-              $listen = $coroutine->taskInstance($listenerTask);
+              $listen = $coroutine->getTask($listenerTask);
               $listen->customData($stream);
               $listen->sendValue([$listenerTask, $task->taskId(), $data]);
               $coroutine->schedule($listen);
@@ -235,7 +235,7 @@ final class Network
           } else {
             $backlog = empty($backlog) ? ($server instanceof \UVTcp ? 1024 : 8192) : $backlog;
             \uv_listen($server, $backlog, function ($server, $status) use ($task, $coroutine, $listenerTask) {
-              $listen = $coroutine->taskInstance($listenerTask);
+              $listen = $coroutine->getTask($listenerTask);
               $uv = $coroutine->getUV();
               if ($server instanceof \UVTcp) {
                 $client = \uv_tcp_init($uv);
@@ -277,7 +277,7 @@ final class Network
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($client, $listenerTask) {
         $task->customData($client);
         $task->taskType('networked');
-        $listen = $coroutine->taskInstance($listenerTask);
+        $listen = $coroutine->getTask($listenerTask);
         $listen->sendValue([$listenerTask, $task->taskId(), $client]);
         $coroutine->schedule($listen);
         $coroutine->schedule($task);
