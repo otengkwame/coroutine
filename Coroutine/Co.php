@@ -43,7 +43,7 @@ final class Co
   protected static $queues;
 
   /**
-   * a task's staring and uniqueId numbers
+   * a task's starting and uniqueId numbers
    *
    * @var array[int]
    */
@@ -66,7 +66,7 @@ final class Co
 
   public static function setUnique(string $tag, int $number): void
   {
-    if (!isset(self::$uniqueId[$tag]) || $tag === 'max')
+    if (!isset(self::$uniqueId[$tag]) || $tag === 'max' || $tag === 'supervisor')
       self::$uniqueId[$tag] = $number;
   }
 
@@ -75,7 +75,7 @@ final class Co
    *
    * @param string $tag Either:
    * - `supervisor` task unique id, the event loop, or
-   * - `parent` unique task id, an async task `coroutine_run` executed
+   * - `parent` unique task id, the `async` task `coroutine_run` executed
    *
    * @return integer|null
    */

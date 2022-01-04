@@ -716,6 +716,9 @@ final class Kernel
         $onClear = self::$onClear;
         self::gatherController();
 
+        /**
+         * @var TaskInterface[];
+         */
         $taskIdList = [];
         $isGatherListGenerator = false;
         $gatherIdList = \is_array($taskId[0]) ? $taskId[0] : $taskId;

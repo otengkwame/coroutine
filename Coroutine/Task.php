@@ -161,12 +161,7 @@ final class Task implements TaskInterface
     $this->cycles++;
   }
 
-  /**
-   * Return the number of times the scheduled task has run.
-   *
-   * @return int
-   */
-  public function getCycles()
+  public function getCycles(): int
   {
     return $this->cycles;
   }

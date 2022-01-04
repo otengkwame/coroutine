@@ -491,8 +491,6 @@ final class Coroutine implements CoroutineInterface
     $this->schedule($task);
     if (Co::getUnique('parent') === null && \count($this->taskMap) === 1)
       Co::setUnique('parent', $tid);
-    elseif (Co::getUnique('supervisor') === null && \count($this->taskMap) === 2)
-      Co::setUnique('supervisor', $tid);
 
     return $tid;
   }
@@ -674,7 +672,6 @@ final class Coroutine implements CoroutineInterface
       return $this->completedMap[$tid];
   }
 
-
   public function updateCompleted(
     int $taskId,
     array $completeList = [],
@@ -721,7 +718,7 @@ final class Coroutine implements CoroutineInterface
     // Check/skip if main supervisor task already running
     if (!$this->ioStarted) {
       $this->ioStarted = true;
-      $this->createTask($this->ioWaiting());
+      Co::setUnique('supervisor', $this->createTask($this->ioWaiting()));
     }
 
     return $this->execute($this->isFutureActive);

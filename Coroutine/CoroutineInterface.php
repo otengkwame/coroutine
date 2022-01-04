@@ -12,8 +12,9 @@ use Async\Exceptions\RuntimeException;
 interface CoroutineInterface
 {
   /**
-   * Creates a new task (using the next free task id).
-   * wraps coroutine into a Task and schedule its execution. Return the Task object/id.
+   * Creates a new task (using the next free task id),
+   * wraps `coroutine` into a Task and schedule its execution.
+   * Returns the `Task` object/id.
    *
    * @see https://docs.python.org/3.9/library/asyncio-task.html#creating-tasks
    * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
@@ -194,7 +195,7 @@ interface CoroutineInterface
    *
    * @internal
    *
-   * @return array|null
+   * @return array<TaskInterface>|null
    */
   public function currentList(): ?array;
 
@@ -203,7 +204,7 @@ interface CoroutineInterface
    *
    * @internal
    *
-   * @return array|null
+   * @return array<TaskInterface>|null
    */
   public function completedList(): ?array;
 

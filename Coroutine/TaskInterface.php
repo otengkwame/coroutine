@@ -11,6 +11,13 @@ interface TaskInterface
   public function taskId(): ?int;
 
   /**
+   * Return the number of times the scheduled task has run.
+   *
+   * @return int
+   */
+  public function getCycles(): int;
+
+  /**
    * Set Task type, currently either `paralleled`, `awaited`,
    * `networked`, or `monitored`.
    *
