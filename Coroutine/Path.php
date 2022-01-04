@@ -27,6 +27,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Add a file change event handler for the path being watched, that's continuously monitored.
+   */
+  \define('monitor_task', 'monitor_task');
+
+  /**
    * Monitor/watch the specified path for changes,
    * switching to `monitor_task()` by id to handle any changes.
    * - The `monitor_task` will receive `(?string $filename, int $events, int $status)`.
@@ -41,6 +46,12 @@ if (!\function_exists('file_operation')) {
   {
     return FileSystem::monitor($path, $monitorTask);
   }
+
+  /**
+   * Monitor/watch the specified path for changes,
+   * switching to `monitor_task()` by id to handle any changes.
+   */
+  \define('monitor', 'monitor');
 
   /**
    * Monitor/watch the specified file for changes,
@@ -68,6 +79,12 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Monitor/watch the specified file for changes,
+   * switching to `monitor_task()` by id to handle any changes.
+   */
+  \define('monitor_file', 'monitor_file');
+
+  /**
    * Monitor/watch the specified directory for changes,
    * switching to `monitor_task()` by id to handle any changes.
    * - The `monitor_task` will receive `(?string $filename, int $events, int $status)`.
@@ -87,6 +104,12 @@ if (!\function_exists('file_operation')) {
 
     return yield monitor($directory, $monitorTask);
   }
+
+  /**
+   * Monitor/watch the specified directory for changes,
+   * switching to `monitor_task()` by id to handle any changes.
+   */
+  \define('monitor_dir', 'monitor_dir');
 
   function slash_switch(string $path)
   {
@@ -138,6 +161,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Recursively delete files/folders asynchronously in a **child/subprocess**.
+   */
+  \define('file_delete', 'file_delete');
+
+  /**
    * Sets access and modification time of file.
    * - This function needs to be prefixed with `yield`
    *
@@ -147,10 +175,16 @@ if (!\function_exists('file_operation')) {
    *
    * @return bool
    */
-  function file_touch($path, $time = null, $atime = null)
+  function file_touch($path = null, $time = null, $atime = null)
   {
     return FileSystem::touch($path, $time, $atime);
   }
+
+
+  /**
+   * Sets access and modification time of file.
+   */
+  \define('file_touch', 'file_touch');
 
   /**
    * Renames a file or directory.
@@ -167,6 +201,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Renames a file or directory.
+   */
+  \define('file_rename', 'file_rename');
+
+  /**
    * Deletes a file.
    * - This function needs to be prefixed with `yield`
    *
@@ -180,12 +219,29 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Deletes a file.
+   */
+  \define('file_unlink', 'file_unlink');
+
+  /**
+   * Create a hard link.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param string $from
+   * @param string $to
+   * @return bool
    * @codeCoverageIgnore
    */
   function file_link($from, $to)
   {
     return FileSystem::link($from, $to);
   }
+
+  /**
+   * Create a hard link.
+   */
+  \define('file_link', 'file_link');
+
 
   /**
    * Creates a symbolic link.
@@ -203,6 +259,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Creates a symbolic link.
+   */
+  \define('file_symlink', 'file_symlink');
+
+  /**
    * Read value of a symbolic link.
    * - This function needs to be prefixed with `yield`
    *
@@ -214,6 +275,11 @@ if (!\function_exists('file_operation')) {
   {
     return FileSystem::readlink($path);
   }
+
+  /**
+   * Read value of a symbolic link.
+   */
+  \define('file_readlink', 'file_readlink');
 
   /**
    * Attempts to create the directory specified by pathname.
@@ -231,6 +297,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Attempts to create the directory specified by pathname.
+   */
+  \define('file_mkdir', 'file_mkdir');
+
+  /**
    * Removes directory.
    * - This function needs to be prefixed with `yield`
    *
@@ -244,6 +315,17 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Removes directory.
+   */
+  \define('file_rmdir', 'file_rmdir');
+
+  /**
+   * Changes file mode.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param string $filename
+   * @param int $mode
+   * @return bool
    * @codeCoverageIgnore
    */
   function file_chmod($filename, $mode)
@@ -252,12 +334,29 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Changes file mode.
+   */
+  \define('file_chmod', 'file_chmod');
+
+  /**
+   * Changes file owner.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param string $path
+   * @param int $uid
+   * @param int $gid
+   * @return bool
    * @codeCoverageIgnore
    */
   function file_chown($path, $uid, $gid)
   {
     return FileSystem::chown($path, $uid, $gid);
   }
+
+  /**
+   * Changes file owner.
+   */
+  \define('file_chown', 'file_chown');
 
   /**
    * List files and directories inside the specified path.
@@ -272,6 +371,11 @@ if (!\function_exists('file_operation')) {
   {
     return FileSystem::scandir($path, $sortingOrder);
   }
+
+  /**
+   * Changes file mode.
+   */
+  \define('file_scandir', 'file_scandir');
 
   /**
    * Gives information about a file.
@@ -303,6 +407,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Gives information about a file.
+   */
+  \define('file_stat', 'file_stat');
+
+  /**
    * Gives information about a file symbolic link, returns same data as `stat()`.
    * - This function needs to be prefixed with `yield`
    *
@@ -332,6 +441,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Gives information about a file symbolic link, returns same data as `stat()`.
+   */
+  \define('file_lstat', 'file_lstat');
+
+  /**
    * Gets information about a file using an open file pointer.
    * - This function needs to be prefixed with `yield`
    *
@@ -346,7 +460,13 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Gets information about a file using an open file pointer.
+   */
+  \define('file_fstat', 'file_fstat');
+
+  /**
    * Transfer data between file descriptors.
+   * - This function needs to be prefixed with `yield`
    *
    * @param resource $out_fd
    * @param resource $in_fd
@@ -364,6 +484,11 @@ if (!\function_exists('file_operation')) {
 
     return $written;
   }
+
+  /**
+   * Transfer data between file descriptors.
+   */
+  \define('file_sendfile', 'file_sendfile');
 
   /**
    * Open specified `$path` file with access `$flag`.
@@ -394,7 +519,7 @@ if (!\function_exists('file_operation')) {
    *
    * @return resource|bool
    */
-  function file_open(string $path, string $flag = 'r', int $mode = \S_IRWXU)
+  function file_open(string $path = null, string $flag = 'r', int $mode = \S_IRWXU)
   {
     $retry = 0;
     while (true) {
@@ -403,12 +528,18 @@ if (!\function_exists('file_operation')) {
         $retry++;
         yield;
         continue;
-      } else
+      } else {
         break;
+      }
     }
 
     return $fd;
   }
+
+  /**
+   * Open specified `$path` file with access `$flag`.
+   */
+  \define('file_open', 'file_open');
 
   /**
    * Read file pointed to by the `resource` file descriptor.
@@ -427,6 +558,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Read file pointed to by the `resource` file descriptor.
+   */
+  \define('file_read', 'file_read');
+
+  /**
    * Write to file pointed to by the `resource` file descriptor.
    * - This function needs to be prefixed with `yield`
    *
@@ -442,6 +578,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Write to file pointed to by the `resource` file descriptor.
+   */
+  \define('file_write', 'file_write');
+
+  /**
    * Close file pointed to by the `resource` file descriptor.
    * - This function needs to be prefixed with `yield`
    *
@@ -453,6 +594,11 @@ if (!\function_exists('file_operation')) {
   {
     return FileSystem::close($fd);
   }
+
+  /**
+   * Close file pointed to by the `resource` file descriptor.
+   */
+  \define('file_close', 'file_close');
 
   /**
    * Synchronize a file's in-core state with storage device by file descriptor.
@@ -468,6 +614,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Synchronize a file's in-core state with storage device by file descriptor.
+   */
+  \define('file_fdatasync', 'file_fdatasync');
+
+  /**
    * Return file size.
    * - This function needs to be prefixed with `yield`
    *
@@ -479,6 +630,11 @@ if (!\function_exists('file_operation')) {
   {
     return file_stat($path, 'size');
   }
+
+  /**
+   * Return file size.
+   */
+  \define('file_size', 'file_size');
 
   /**
    * Check if file exists.
@@ -493,6 +649,11 @@ if (!\function_exists('file_operation')) {
     $status = yield file_size($path);
     return \is_int($status);
   }
+
+  /**
+   * Check if file exists.
+   */
+  \define('file_exist', 'file_exist');
 
   /**
    * Open url/uri.
@@ -521,6 +682,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Open url/uri.
+   */
+  \define('file_uri', 'file_uri');
+
+  /**
    * Reads remainder of a stream/file pointer by size into a string,
    * will stop if timeout seconds lapse.
    * - This function needs to be prefixed with `yield`
@@ -535,6 +701,12 @@ if (!\function_exists('file_operation')) {
   {
     return FileSystem::contents($fd, $size, $timeout_seconds);
   }
+
+  /**
+   * Reads remainder of a stream/file pointer by size into a string,
+   * will stop if timeout seconds lapse.
+   */
+  \define('file_contents', 'file_contents');
 
   /**
    * Reads entire file into a string.
@@ -568,6 +740,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Reads entire file into a string.
+   */
+  \define('file_get', 'file_get');
+
+  /**
    * Write a string to a file.
    * - This function needs to be prefixed with `yield`
    *
@@ -590,6 +767,11 @@ if (!\function_exists('file_operation')) {
   }
 
   /**
+   * Write a string to a file.
+   */
+  \define('file_put', 'file_put');
+
+  /**
    * Reads entire file into an array.
    * - This function needs to be prefixed with `yield`
    *
@@ -601,6 +783,11 @@ if (!\function_exists('file_operation')) {
   {
     return await('file', $path, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
   }
+
+  /**
+   * Reads entire file into an array.
+   */
+  \define('file_file', 'file_file');
 
   /**
    * Retrieves header/meta data from streams/file pointers.
