@@ -56,13 +56,14 @@ interface CoroutineInterface
   public function isFiber($object);
 
   /**
-   * Performs a clean application exit/shutdown, killing tasks/processes, and resetting all data.
+   * Performs a clean application shutdown, killing tasks/processes, and resetting all data, except **created** `async` functions.
+   * - This function needs to be prefixed with `yield`
    *
    * Provide `$skipTask` incase called by an Signal Handler.
    *
    * @param int $skipTask - Defaults to the main parent task.
    * - The calling `$skipTask` task id will not get cancelled, the script execution will return to.
-   * - Use `getTask()` to retrieve caller's task id.
+   * - Use `currentTask()` to retrieve caller's task id.
    */
   public function shutdown(?int $skipTask = 1);
 

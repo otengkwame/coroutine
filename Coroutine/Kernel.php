@@ -104,7 +104,7 @@ final class Kernel
    *
    * @return int
    */
-  public static function getTask()
+  public static function currentTask()
   {
     return new Kernel(
       function (TaskInterface $task, CoroutineInterface $coroutine) {
@@ -283,13 +283,13 @@ final class Kernel
   }
 
   /**
-   * Performs a clean application exit and shutdown.
+   * Performs a clean application shutdown, killing tasks/processes, and resetting all data, except **created** `async` functions.
    *
    * Provide $skipTask incase called by an Signal Handler.
    *
    * @param int $skipTask - Defaults to the main parent task.
    * - The calling `$skipTask` task id will not get cancelled, the script execution will return to.
-   * - Use `getTask()` to retrieve caller's task id.
+   * - Use `currentTask()` to retrieve caller's task id.
    */
   public static function shutdown(int $skipTask = 1)
   {
@@ -635,14 +635,14 @@ final class Kernel
    *  propagated to the task that awaits on gather().
    * Other awaitables in the aws sequence won't be cancelled and will continue to run.
    * - If `false`, exceptions are treated the same as successful results, and aggregated in the result list.
-   * @param bool $clear - If `true` (default), close/cancel remaining results
+   * @param bool $clear - If `true`, close/cancel remaining results, `false` (default)
    * @throws \LengthException - If the number of tasks less than the desired $race count.
    *
    * @see https://docs.python.org/3.7/library/asyncio-task.html#waiting-primitives
    *
    * @return array associative `$taskId` => `$result`
    */
-  public static function gatherWait(array $tasks, int $race = 0, bool $exception = true, bool $clear = true)
+  public static function gatherWait(array $tasks, int $race = 0, bool $exception = true, bool $clear = false)
   {
     self::$gatherCount = $race;
     self::$gatherShouldError = $exception;
@@ -705,7 +705,7 @@ final class Kernel
         $gatherShouldClearCancelled = self::$gatherShouldClearCancelled;
         self::$gatherCount = 0;
         self::$gatherShouldError = true;
-        self::$gatherShouldClearCancelled = true;
+        self::$gatherShouldClearCancelled = false;
 
         $isCustomSate = self::$isCustomSate;
         $onPreComplete = self::$onPreComplete;

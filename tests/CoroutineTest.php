@@ -77,7 +77,7 @@ class CoroutineTest extends TestCase
 
     public function task($max)
     {
-        $tid = (yield Kernel::getTask()); // <-- here's the system call!
+        $tid = (yield Kernel::currentTask()); // <-- here's the system call!
         for ($i = 1; $i <= $max; ++$i) {
             $this->task .= "This is task $tid iteration $i.\n";
             yield;
@@ -121,7 +121,7 @@ class CoroutineTest extends TestCase
 
     public function childTask()
     {
-        $tid = (yield Kernel::getTask());
+        $tid = (yield Kernel::currentTask());
         $this->assertNotNull($tid);
         try {
             while (true) {
@@ -134,7 +134,7 @@ class CoroutineTest extends TestCase
 
     public function taskKernel()
     {
-        $tid = (yield Kernel::getTask());
+        $tid = (yield Kernel::currentTask());
         $childTid = (yield Kernel::createTask($this->childTask()));
 
         for ($i = 1; $i <= 6; ++$i) {

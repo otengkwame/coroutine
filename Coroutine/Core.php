@@ -376,7 +376,7 @@ if (!\function_exists('coroutine_run')) {
    */
   function kill_task($customState = null)
   {
-    $currentTask = yield Kernel::getTask();
+    $currentTask = yield Kernel::currentTask();
     return yield Kernel::cancelTask($currentTask, $customState);
   }
 
@@ -399,7 +399,7 @@ if (!\function_exists('coroutine_run')) {
    */
   function current_task()
   {
-    return Kernel::getTask();
+    return Kernel::currentTask();
   }
 
   /**
@@ -427,14 +427,14 @@ if (!\function_exists('coroutine_run')) {
   \define('stateless_task', 'stateless_task');
 
   /**
-   * Performs a clean application exit and shutdown.
+   * Performs a clean application shutdown, killing tasks/processes, and resetting all data, except **created** `async` functions.
    * - This function needs to be prefixed with `yield`
    *
    * Provide $skipTask incase called by an Signal Handler.
    *
    * @param int $skipTask - Defaults to the main parent task.
    * - The calling `$skipTask` task id will not get cancelled, the script execution will return to.
-   * - Use `getTask()` to retrieve caller's task id.
+   * - Use `current_task()` to retrieve caller's task id.
    */
   function shutdown(int $skipTask = 1)
   {
