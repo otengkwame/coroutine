@@ -438,6 +438,10 @@ if (!\function_exists('coroutine_run')) {
    */
   function shutdown(int $skipTask = 1)
   {
+    //if (\isLogger_active()) {
+    //  yield \logger_commit();
+    //  yield \logger_shutdown();
+    //}
     return Kernel::shutdown($skipTask);
   }
 

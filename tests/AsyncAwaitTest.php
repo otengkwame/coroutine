@@ -179,4 +179,21 @@ class AsyncAwaitTest extends TestCase
     {
         \coroutine_run($this->taskAwaitFileGetContentsTask());
     }
+
+    public function taskGatherAsync()
+    {
+        \async('already', function ($value) {
+            yield;
+            return "received: " . $value;
+        });
+
+        $value = yield \gather(\await(already, 16));
+        $this->assertEquals('received: 16', $value[3]);
+        yield \shutdown();
+    }
+
+    public function testGatherAsync()
+    {
+        \coroutine_run($this->taskGatherAsync());
+    }
 }

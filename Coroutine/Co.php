@@ -200,13 +200,13 @@ final class Co
 
   public static function reset(): void
   {
+    Log::restLogs();
+    Globals::reset();
     self::$instance = null;
     self::$timer = null;
     self::$parallel = null;
     self::$fibers = null;
     self::$queues = null;
     self::$uniqueId = null;
-
-    Globals::reset();
   }
 }

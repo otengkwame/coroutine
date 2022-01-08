@@ -18,7 +18,10 @@
         "event-loop",
         "event-driven",
         "ext-parallel",
-        "async"
+        "async",
+        "psr-3",
+        "log",
+        "logging"
     ],
     "homepage": "https://github.com/symplely/coroutine",
     "type": "library",
@@ -35,11 +38,13 @@
     ],
     "require": {
         "php": ">7.1",
+        "psr/log": ">1.0",
         "symplely/spawn": "^4.0.2"
     },
     "autoload": {
         "files": [
             "Coroutine/Core.php",
+            "Coroutine/Loggers.php",
             "Coroutine/Path.php",
             "Coroutine/Stream.php",
             "Coroutine/Worker.php",
@@ -50,6 +55,7 @@
         "psr-4": {
             "Async\\": [
                 "Coroutine/",
+                "Coroutine/Logger/",
                 "Coroutine/Exceptions/",
                 "Coroutine/Fiber/"
             ],
@@ -76,5 +82,8 @@
     },
     "scripts": {
         "test": "vendor/bin/phpunit --bootstrap vendor/autoload.php tests"
+    },
+    "provide": {
+        "psr/log-implementation": "1.0.0"
     }
 }
