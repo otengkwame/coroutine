@@ -5,7 +5,7 @@ namespace Async\Tests;
 use function Async\Fibers\{create_fiber, start_fiber, resume_fiber, suspend_fiber, throw_fiber, fiberize};
 
 use Async\Co;
-use Async\Exceptions\Panicking;
+use Async\Panicking;
 use PHPUnit\Framework\TestCase;
 
 class Fiber_81FunctionsTest extends TestCase

@@ -9,13 +9,20 @@ use Async\Spawn\FutureInterface;
 use Async\Channel;
 use Async\CoroutineInterface;
 use Async\TaskInterface;
-use Async\Exceptions\LengthException;
-use Async\Exceptions\InvalidStateError;
-use Async\Exceptions\InvalidArgumentException;
-use Async\Exceptions\TimeoutError;
-use Async\Exceptions\CancelledError;
-use Async\Exceptions\Panic;
+use Async\LengthException;
+use Async\InvalidStateError;
+use Async\InvalidArgumentException;
+use Async\TaskTimeout;
+use Async\TimeoutError;
+use Async\CancelledError;
+use Async\Panic;
 use Async\FiberInterface;
+use Async\Misc\AsyncIterator;
+use Async\Misc\Contextify;
+use Async\Misc\ContextInterface;
+use Async\Misc\InjectionInterface;
+use Async\Misc\TimeoutAfter;
+use Psr\Container\ContainerInterface;
 
 use function Async\Worker\awaitable_future;
 
@@ -31,7 +38,7 @@ final class Kernel
   protected $callback;
   protected static $gatherCount = 0;
   protected static $gatherShouldError = true;
-  protected static $gatherShouldClearCancelled = true;
+  protected static $gatherShouldClearCancelled = false;
 
   /**
    * Custom `Gather` not started state.
@@ -102,7 +109,7 @@ final class Kernel
   /**
    * Returns the current context task ID
    *
-   * @return int
+   * @return int task id instance
    */
   public static function currentTask()
   {
@@ -115,19 +122,19 @@ final class Kernel
   }
 
   /**
-   * Set current context Task to stateless, aka `networked`, meaning not storing any return values or exceptions on completion.
-   * Not moved to completed task list.
-   * Will return the current context task ID.
+   * Set current Task context type, currently either `paralleled`, `async`, `awaited`, `stateless`, or `monitored`.
+   * Will return the current task ID.
    *
    * - This function needs to be prefixed with `yield`
    *
+   * @param string $context
    * @return int
    */
-  public static function statelessTask()
+  public static function taskType(string $context = 'async')
   {
     return new Kernel(
-      function (TaskInterface $task, CoroutineInterface $coroutine) {
-        $task->taskType('networked');
+      function (TaskInterface $task, CoroutineInterface $coroutine) use ($context) {
+        $task->taskType($context);
         $task->sendValue($task->taskId());
         $coroutine->schedule($task);
       }
@@ -135,17 +142,22 @@ final class Kernel
   }
 
   /**
-   * Create an new task
-   * @see https://docs.python.org/3.9/library/asyncio-task.html#creating-tasks
+   * Creates a new task (using the next free task id), wraps **Generator**, a `coroutine` into a `Task` and schedule its execution.
+   * Returns the `Task` object/id.
+   *
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#creating-tasks
    * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
+   *
+   * @param \Generator $coroutines
+   * @param bool $isAsync should task type be set to a `async` function
    *
    * @return int task ID
    */
-  public static function createTask(\Generator $coroutines)
+  public static function createTask(\Generator $coroutines, bool $isAsync = false)
   {
     return new Kernel(
-      function (TaskInterface $task, CoroutineInterface $coroutine) use ($coroutines) {
-        $task->sendValue($coroutine->createTask($coroutines));
+      function (TaskInterface $task, CoroutineInterface $coroutine) use ($coroutines, $isAsync) {
+        $task->sendValue($coroutine->createTask($coroutines, $isAsync));
         $coroutine->schedule($task);
       }
     );
@@ -222,27 +234,33 @@ final class Kernel
   }
 
   /**
-   * kill/remove an task using task id.
+   * Cancel a task by **throwing** a `CancelledError` exception, this will also delay kill/remove
+   * the task, the status of such can be checked with `is_cancelled` and `is_cancelling` functions.
    * Optionally pass custom cancel state and error message for third party code integration.
    *
    * @see https://docs.python.org/3.10/library/asyncio-task.html#asyncio.Task.cancel
    * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L181
    *
-   * @param int $tid
+   * @param int $tid task id instance
    * @param mixed $customState
    * @param string $errorMessage
    * @return bool
    *
    * @throws \InvalidArgumentException
    */
-  public static function cancelTask($tid = 0, $customState = null, string $errorMessage = 'Invalid task ID!')
+  public static function cancelTask($tid = 0, $customState = null, string $errorMessage = 'Invalid task ID!', bool $type = false)
   {
     return new Kernel(
-      function (TaskInterface $task, CoroutineInterface $coroutine) use ($tid, $customState, $errorMessage) {
+      function (TaskInterface $task, CoroutineInterface $coroutine) use ($tid, $customState, $errorMessage, $type) {
         $cancelTask = $coroutine->getTask($tid);
         if (!\is_null($cancelTask)) {
+          $coroutine->clearTimeout($cancelTask);
           if (!empty($customState))
             $cancelTask->customState($customState);
+
+          $isContext = $task->hasWith() || $cancelTask->hasGroup();
+          if ($isContext)
+            $coroutine->createTask(\delayer(0, [$coroutine, 'cancelTask'], $tid, $customState, $errorMessage));
 
           if ($cancelTask->hasCaller()) {
             $unjoined = $cancelTask->getCaller();
@@ -252,13 +270,19 @@ final class Kernel
             $coroutine->schedule($unjoined);
           }
 
-          $cancelTask->setException(new CancelledError("Task {$tid}!"));
+          $error = ($isContext || $type) ? new TaskCancelled("Task {$tid}!") :  new CancelledError("Task {$tid}!");
+          $cancelTask->setException($error);
           if ($cancelTask instanceof FiberInterface)
             $coroutine->scheduleFiber($cancelTask);
           else
             $coroutine->schedule($cancelTask);
 
-          $task->sendValue(true);
+          if ($task->taskId() === $cancelTask->taskId()) {
+            $task->setException($error);
+          } else {
+            $task->sendValue(true);
+          }
+
           $coroutine->schedule($task);
         } else {
           throw new InvalidArgumentException($errorMessage . ' ' . $tid);
@@ -267,6 +291,13 @@ final class Kernel
     );
   }
 
+  /**
+   * 	Wait for the task to terminate and return its result.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param integer $tid task id instance
+   * @return mixed
+   */
   public static function joinTask(int $tid)
   {
     return new Kernel(
@@ -274,7 +305,11 @@ final class Kernel
         $join = $coroutine->getTask($tid);
         if (!\is_null($join)) {
           $join->setCaller($task);
+          if ($join->hasGroup())
+            $join->discardGroup();
+
           $coroutine->schedule($join);
+          return $join->join();
         } else {
           $coroutine->schedule($task);
         }
@@ -341,29 +376,6 @@ final class Kernel
         if ($immediately) {
           $coroutine->schedule($task);
         }
-      }
-    );
-  }
-
-  /**
-   * Block/sleep for delay seconds.
-   * Suspends the calling task, allowing other tasks to run.
-   *
-   * @see https://docs.python.org/3.9/library/asyncio-task.html#sleeping
-   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L593
-   *
-   * @param float $delay
-   * @param mixed $result - If provided, it is returned to the caller when the coroutine complete
-   */
-  public static function sleepFor(float $delay = 0.0, $result = null)
-  {
-    return new Kernel(
-      function (TaskInterface $task, CoroutineInterface $coroutine) use ($delay, $result) {
-        $coroutine->addTimeout(function () use ($task, $coroutine, $result) {
-          if (!empty($result))
-            $task->sendValue($result);
-          $coroutine->schedule($task);
-        }, $delay);
       }
     );
   }
@@ -730,7 +742,7 @@ final class Kernel
           } elseif (\is_int($value)) {
             $taskIdList[$value] = $value;
           } else {
-            \panic("Invalid access, only array of integers, or generator objects allowed!");
+            \panic("Invalid access, only array of integers - `task Id`, or generator objects allowed!");
           }
         }
 
@@ -760,7 +772,7 @@ final class Kernel
             if (
               isset($taskList[$tid])
               && $taskList[$tid] instanceof TaskInterface
-              && $taskList[$tid]->isNetwork()
+              && $taskList[$tid]->isStateless()
             ) {
               $count--;
               $results[$tid] = null;
@@ -965,13 +977,40 @@ final class Kernel
   }
 
   /**
-   * Wait for the callable to complete with a timeout.
+   * Block/sleep for delay seconds.
+   * Suspends the calling task, allowing other tasks to run.
+   *
+   * @see https://docs.python.org/3.9/library/asyncio-task.html#sleeping
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L593
+   *
+   * @param float $delay
+   * @param mixed $result - If provided, it is returned to the caller when the coroutine complete
+   */
+  public static function sleepFor(float $delay = 0.0, $result = null)
+  {
+    return new Kernel(
+      function (TaskInterface $task, CoroutineInterface $coroutine) use ($delay, $result) {
+        $coroutine->addTimeout(function () use ($task, $coroutine, $result) {
+          $task->setTimer();
+          if (!empty($result))
+            $task->sendValue($result);
+          $coroutine->schedule($task);
+        }, $delay, $task->taskId());
+      }
+    );
+  }
+
+  /**
+   * Wait for the `callable` to complete with a timeout.
    *
    * @see https://docs.python.org/3.10/library/asyncio-task.html#timeouts
    * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L392
    *
    * @param callable $callable
    * @param float $timeout
+   * @return mixed
+   * @throws TimeoutError If a timeout occurred into `current` task.
+   * @throws CancelledError If a timeout occurred into `callable` task.
    */
   public static function waitFor($callable, float $timeout = null)
   {
@@ -984,80 +1023,321 @@ final class Kernel
         }
 
         $coroutine->addTimeout(function () use ($taskId, $timeout, $task, $coroutine) {
+          $task->setTimer();
           if (!empty($timeout)) {
             $cancelTask = $coroutine->getTask($taskId);
             $cancelTask->setException(new CancelledError("Task {$taskId}!"));
             $task->setException(new TimeoutError($timeout));
-            $coroutine->schedule($task);
-          } else {
-            if ($coroutine->isCompleted($taskId)) {
-              $tasks = $coroutine->getCompleted($taskId);
-              $result = $tasks->result();
-              $coroutine->updateCompleted($taskId);
-              $task->sendValue($result);
-            }
-            $coroutine->schedule($task);
+          } elseif ($coroutine->isCompleted($taskId)) {
+            $tasks = $coroutine->getCompleted($taskId);
+            $result = $tasks->result();
+            $coroutine->updateCompleted($taskId);
+            $task->sendValue($result);
           }
-        }, $timeout);
+
+          $coroutine->schedule($task);
+        }, $timeout, $task->taskId());
       }
     );
   }
 
   /**
    * Any blocking operation can be cancelled by a timeout.
+   * Throws a `TaskTimeout` exception in the calling task after seconds have elapsed.
+   * This function may be used in two ways. You can apply it to the execution of a single coroutine:
+   *
+   *```php
+   *         yield timeout_after(seconds, coro(args))
+   *
+   * # Or you can use it as an asynchronous context manager to apply a timeout to a block of statements:
+   *
+   *         async_with(timeout_after(seconds));
+   *               // Or
+   *         yield with(timeout_after(seconds));
+   *            yield coro1(args)
+   *            yield coro2(args)
+   *            ...
+   *```
    * - This function needs to be prefixed with `yield`
    *
    * @param float $timeout
    * @param Generator|callable $callable
    * @param mixed ...$args
    * @return mixed
+   * @throws TaskTimeout If a timeout has occurred.
    * @see https://curio.readthedocs.io/en/latest/reference.html#timeout_after
    * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/time.py#L141
    */
-  public static function timeoutAfter(float $timeout, $callable, ...$args)
+  public static function timeoutAfter(float $timeout = 0.0, $callable = null, ...$args)
   {
-    return new Kernel(
-      function (TaskInterface $task, CoroutineInterface $coroutine) use ($callable, $timeout, $args) {
-        $taskId = $coroutine->createTask(($callable instanceof \Generator ? $callable : \awaitAble($callable, ...$args)));
-        $passedId = $coroutine->getTask(...$args);
-        $startTask = $passedId instanceof TaskInterface && \is_callable($callable) ? $passedId : $coroutine->getTask($taskId);
+    if ($callable)
+      return self::__timeoutAfter($timeout, $callable, ...$args);
 
-        $coroutine->addTimeout(function () use ($taskId, $timeout, $task, $coroutine, $startTask) {
-          $completeList = $coroutine->completedList();
-          if (!isset($completeList[$taskId])) {
-            $task->setException(new TimeoutError($timeout));
+    return new TimeoutAfter($timeout);
+  }
+
+  protected static function __timeoutAfter(float $timeout = 0.0, $callable = null, ...$args)
+  {
+    return yield yield new Kernel(
+      function (TaskInterface $task, CoroutineInterface $coroutine) use ($callable, $timeout, $args) {
+        if ($callable instanceof \Generator) {
+          $taskId = $coroutine->createTask($callable);
+        } elseif (\is_callable($callable)) {
+          $taskId = $coroutine->createTask(\awaitAble($callable, ...$args));
+        }
+
+        $startTask = $coroutine->getTask($taskId);
+        $coroutine->addTimeout(function () use ($timeout, $task, $coroutine, $taskId) {
+          $task->setTimer();
+          $startTask = $coroutine->getTask($taskId);
+          if (!$coroutine->isCompleted($taskId)) {
+            if ($task->hasCaller()) {
+              $caller = $task->getCaller();
+              $task->setCaller();
+              $coroutine->schedule($startTask);
+              $coroutine->createTask(\delayer(0, [$coroutine, 'cancelTask'], $taskId));
+              $task->setException(new TaskTimeout($timeout));
+              $coroutine->schedule($caller);
+            } else {
+              $task->setException(new TaskTimeout($timeout));
+              $coroutine->schedule($startTask);
+            }
           } else {
-            $tasks = $completeList[$taskId];
-            $result = $tasks->result();
-            $coroutine->updateCompleted($taskId, $completeList);
+            $completed = $coroutine->getCompleted($taskId);
+            $result = $completed->result();
+            $coroutine->updateCompleted($taskId);
             $task->sendValue($result);
           }
 
           $coroutine->schedule($task);
-          if (!isset($result))
-            $coroutine->schedule($startTask);
-        }, $timeout);
+        }, $timeout, $task->taskId());
+
+        $coroutine->schedule($startTask);
       }
     );
   }
 
   /**
-   * Makes an resolvable function from `label` name that's callable with `await`/`away` and inturn calls **create_task**.
-   * The passed in `function` is wrapped to be `awaitAble`. The `label` will also call `Define()` and make that _name_ a **global** `constant`.
+   * Begins an asynchronous context manager that is able to suspend execution in its `__enter()` and `__exit()` methods.
+   *  It is a **Error** to use `async_with` outside of an `async` function.
+   *
+   * @see https://book.pythontips.com/en/latest/context_managers.html
+   *
+   * @param ContextInterface|resource $context
+   * @param ContainerInterface|object|ContextInterface|null $object
+   * @param array[] $options
+   * @return ContextInterface
+   * @throws Panic if no context instance, or `__enter()` method does not return `true`.
+   * @todo create `async_for()` to obtain tasks in the order that they complete, as they complete.
+   */
+  public static function asyncWith($context = null, $object = null, array $options = []): ContextInterface
+  {
+    $di = $options;
+    if (\is_object($object) && !$object instanceof ContextInterface) {
+      $inject = $di = $object;
+    }
+
+    // @codeCoverageIgnoreStart
+    if (
+      (!empty($options) && isset($inject))
+      && ($inject instanceof ContainerInterface)
+    ) {
+      if ($inject instanceof InjectionInterface) {
+        $last = \array_pop($options);
+        if (\is_array($options)) {
+          foreach ($options as $className => $friendlyName)
+            $inject->set($className, $friendlyName);
+        }
+
+        if (\is_array($last)) {
+          foreach ($last as $identifier => $parameters) {
+            $di = $inject->get($identifier, $parameters);
+            if (\is_object($di))
+              break;
+          }
+        }
+      } else {
+        $identifier = \array_unshift($options);
+        $di = $inject->get((string) $identifier);
+      }
+    }
+    // @codeCoverageIgnoreEnd
+
+    if (\is_resource($context)) {
+      $context = new Contextify($context, $di);
+    }
+
+    if ($object instanceof ContextInterface) {
+      \__with($object);
+    }
+
+    if ($context instanceof ContextInterface) {
+      $context();
+      if ($context->entered())
+        return $context;
+    }
+
+    \panic('No valid context manager found!');
+  }
+
+  /**
+   * Begins an asynchronous context manager that is able to suspend execution in its `__enter()` and `__exit()` methods.
+   * It is a **Error** to use `with` outside of an `async` function.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @see https://book.pythontips.com/en/latest/context_managers.html
+   *
+   * @param ContextInterface|resource $context
+   * @param ContainerInterface|object|null $object
+   * @param array[] $options
+   * @return ContextInterface
+   * @throws Panic if no context instance, or `__enter()` method does not return `true`.
+   */
+  public static function with($context = null, $object = null, array $options = [], \Closure $as = null)
+  {
+    $di = $options;
+    if (\is_object($object) && !$object instanceof ContextInterface) {
+      $inject = $di = $object;
+    }
+
+    // @codeCoverageIgnoreStart
+    if (
+      (!empty($options) && isset($inject))
+      && ($inject instanceof ContainerInterface)
+    ) {
+      if ($inject instanceof InjectionInterface) {
+        $last = \array_pop($options);
+        if (\is_array($options)) {
+          foreach ($options as $className => $friendlyName)
+            $inject->set($className, $friendlyName);
+        }
+
+        if (\is_array($last)) {
+          foreach ($last as $identifier => $parameters) {
+            $di = $inject->get($identifier, $parameters);
+            if (\is_object($di))
+              break;
+          }
+        }
+      } else {
+        $identifier = \array_unshift($options);
+        $di = $inject->get((string) $identifier);
+      }
+    }
+    // @codeCoverageIgnoreEnd
+
+    $task = \coroutine()->getTask(yield \current_task());
+    if (\is_resource($context)) {
+      $context = new Contextify($context, $di);
+    } elseif ($task->hasWith()) {
+      $contextTask = $task->getWith();
+      $task->setWith($context);
+      yield \__with($contextTask);
+    }
+
+    if ($context instanceof ContextInterface) {
+      if ($context() instanceof \Generator)
+        yield $context();
+
+      if (!$context->entered())
+        \panic('No valid context manager found!');
+
+      return $context;
+    }
+  }
+
+  /**
+   * Allows convenient iteration over asynchronous `Iterator`.
+   * This will obtain `task` results in the order that they complete, as they complete.
+   * - Only `current()`, and `valid()` _methods_ SHOULD BE *implemented* in `Iterator` .
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param AsyncIterator $task A `task` producing _results_ in **chunks**.
+   * @param \Closure $as Will **receive** _chunk_ of a _task_ `result` for processing.
+   * @return void
+   * @see https://docs.python.org/3/reference/compound_stmts.html#the-async-for-statement
+   */
+  public static function asyncFor(AsyncIterator $task, \Closure $as)
+  {
+    while (true) {
+      try {
+        $item = yield $task->current();
+      } finally {
+        if ($item !== null)
+          yield $as($item);
+      }
+
+      if (!$task->valid())
+        break;
+    }
+
+    if ($task instanceof ContextInterface)
+      yield \__with($task);
+  }
+
+  /**
+   * Makes an resolvable function from `label` name that's callable with `coroutine_run`, `go`,
+   * `await`/`away`, `spawner` and inturn calls **create_task**.
+   * The passed in `function` is wrapped to be `awaitAble`. The `label` will be `Define()` and make that _name_ a **global** `constant`.
    *
    * - This will store a closure in `Co` static class with supplied `label` name as key.
-   * @see https://docs.python.org/3.7/reference/compound_stmts.html#async-def
+   * @see https://docs.python.org/3.10/reference/compound_stmts.html#async-def
    *
    * @param string $label
    * @param callable $function
+   * @return void
    * @throws Panic — if the **named** `label` function already exists.
    */
   public static function async(string $label, callable $function): void
   {
     $closure = function (...$args) use ($function) {
       yield;
-      $result = yield $function(...$args);
-      $task = Co::getLoop()->getTask(yield \current_task());
+      $coroutine = \coroutine();
+      try {
+        $result = yield $function(...$args);
+      } catch (\Throwable $error) {
+        yield;
+        $task = $coroutine->getTask(yield \current_task());
+        $task->setState(
+          ($error instanceof CancelledError ? 'cancelled' : 'erred')
+        );
+
+        $context = $task->getWith();
+        $parent = \get_parent_class($error);
+        $isParentError = $parent === false || \strpos($parent, 'Async\\') !== false || $parent === 'Exception';
+        if ($task->hasCaller()) {
+          $unjoined = $task->getCaller();
+          if (!$isParentError)
+            $error = new \Error($error->getMessage(), $error->getCode(), $error->getPrevious());
+
+          $unjoined->setException($error);
+          $coroutine->schedule($unjoined);
+        } elseif (($context instanceof ContextInterface && $context->isWith() && $context->withTask() === $task) || $task->hasGroup()) {
+          /** @var TaskGroup|ContextInterface */
+          $instance = $task->hasGroup() ? $task->getGroup() : $context;
+          try {
+            yield $instance->__exit($error);
+          } catch (\Throwable $e) {
+          }
+
+          if ($task->hasGroup())
+            $instance->task_done($task, true, $error);
+        }
+
+        if ($task->taskId() === Co::getUnique('parent')) {
+          $delayThrow = function () use ($error) {
+            throw $error;
+          };
+
+          $coroutine->createTask(\delayer(1, $delayThrow));
+        } else {
+          $task->setException($error);
+        }
+
+        return $coroutine->schedule($task);
+      }
+
+      $task = $coroutine->getTask(yield \current_task());
       if ($task instanceof TaskInterface)
         $task->setResult($result);
 
@@ -1076,6 +1356,7 @@ final class Kernel
    *
    * - This function needs to be prefixed with `yield`
    *
+   * @see https://www.python.org/dev/peps/pep-0492/#id56
    * @see https://docs.python.org/3.10/reference/expressions.html#await
    *
    * @param string $label `async` function, **reserved**  or `PHP` builtin function.
@@ -1087,13 +1368,16 @@ final class Kernel
   {
     switch ($label) {
       case 'sleep':
+      case 'sleep_for':
         return yield Kernel::sleepFor(...$arguments);
       case 'cancel':
         return yield Kernel::cancelTask(...$arguments);
       case 'join':
+      case 'join_task':
         $tid = \array_shift($arguments);
         return yield Kernel::joinTask($tid);
       case 'spawn':
+      case 'spawner':
         $async = \array_shift($arguments);
         return yield Kernel::away($async, ...$arguments);
       case 'gather':
@@ -1142,7 +1426,7 @@ final class Kernel
   public static function away($label, ...$args)
   {
     if (\is_string($label) && Co::isFunction($label)) {
-      return Kernel::createTask(Co::getFunction($label)(...$args));
+      return Kernel::createTask(Co::getFunction($label)(...$args), true);
     }
 
     return new Kernel(
@@ -1219,5 +1503,57 @@ final class Kernel
         $coroutine->scheduleFiber($fiber);
       }
     );
+  }
+
+  /**
+   * Returns the _result_ of a completed `task`.
+   *
+   * @param integer $tid task id instance
+   * @return mixed
+   * @throws Exception|Error if _task_ `erred`.
+   * @throws InvalidStateError if still `running`, not terminated.
+   */
+  public static function resultFor(int $tid)
+  {
+    $result = null;
+    $coroutine = \coroutine();
+    if ($coroutine->isGroup($tid)) {
+      $result = $coroutine->getGroupResult($tid);
+    } elseif ($coroutine->isCompleted($tid)) {
+      $result = $coroutine->getCompleted($tid)->result();
+      $coroutine->setGroupResult($tid, $result);
+      $coroutine->updateCompleted($tid);
+    } elseif ($coroutine->getTask($tid)) {
+      throw new InvalidStateError("{$tid}");
+    }
+
+    if ($result instanceof \Throwable)
+      throw $result;
+
+    return $result;
+  }
+
+  /**
+   * Returns the _exception_ of a `task`.
+   *
+   * @param integer $tid task id instance
+   * @return null|Throwable
+   * @throws InvalidStateError if _task_ still `running`, not terminated.
+   */
+  public static function exceptionFor(int $tid): ?\Throwable
+  {
+    $exception = null;
+    $coroutine = \coroutine();
+    if ($coroutine->isGroup($tid)) {
+      $exception = $coroutine->getGroupResult($tid);
+    } elseif ($coroutine->isCompleted($tid)) {
+      $exception = $coroutine->getCompleted($tid)->exception();
+      $coroutine->setGroupResult($tid, $exception);
+      $coroutine->updateCompleted($tid);
+    } elseif ($coroutine->getTask($tid)) {
+      throw new InvalidStateError("{$tid}");
+    }
+
+    return ($exception instanceof \Throwable) ? $exception : null;
   }
 }

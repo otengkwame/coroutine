@@ -120,12 +120,12 @@ interface FiberInterface
     public function setState(string $status);
 
     /**
-     * @param TaskInterface|FiberInterface|null $taskFiber
+     * @param TaskInterface|FiberInterface|null $caller
      * @return void
      *
      * @internal
      */
-    public function setCaller($taskFiber);
+    public function setCaller($caller);
 
     /**
      * @return TaskInterface|FiberInterface|null

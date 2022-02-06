@@ -1,8 +1,8 @@
 <?php
 
-namespace Async\Exceptions;
+namespace Async;
 
-use Async\Exceptions\RuntimeException;
+use Async\RuntimeException;
 
 /**
  * Throws when `Queue::get_nowait()` is called on an **empty** `Queue`.

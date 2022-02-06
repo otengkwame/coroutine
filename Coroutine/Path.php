@@ -253,7 +253,7 @@ if (!\function_exists('file_operation')) {
    *
    * @return bool
    */
-  function file_symlink($from, $to, $flag = 0)
+  function file_symlink(?string $from = null, ?string $to = null, int $flag = 0)
   {
     return FileSystem::symlink($from, $to, $flag);
   }
@@ -401,7 +401,7 @@ if (!\function_exists('file_operation')) {
    *````
    * @return array|bool
    */
-  function file_stat($path, string $info = null)
+  function file_stat(string $path = '', ?string $info = null)
   {
     return FileSystem::stat($path, $info);
   }
@@ -435,7 +435,7 @@ if (!\function_exists('file_operation')) {
    *````
    * @return array|bool
    */
-  function file_lstat($path, $info = null)
+  function file_lstat(string $path = '', ?string $info = null)
   {
     return FileSystem::lstat($path, $info);
   }
@@ -454,7 +454,7 @@ if (!\function_exists('file_operation')) {
    *
    * @return array|bool
    */
-  function file_fstat($fd, $info = null)
+  function file_fstat($fd = null, ?string $info = null)
   {
     return FileSystem::fstat($fd, $info);
   }
@@ -475,7 +475,7 @@ if (!\function_exists('file_operation')) {
    *
    * @return int|bool
    */
-  function file_sendfile($out_fd, $in_fd, int $offset = 0, int $length = 8192)
+  function file_sendfile($out_fd = null, $in_fd = null, int $offset = 0, int $length = 8192)
   {
     $written = yield FileSystem::sendfile($out_fd, $in_fd, $offset, $length);
     if (FileSystem::isUv()) {
@@ -552,7 +552,7 @@ if (!\function_exists('file_operation')) {
    * @return string
    * @throws Exception
    */
-  function file_read($fd, int $offset = 0, int $length = 8192)
+  function file_read($fd = null, int $offset = 0, int $length = 8192)
   {
     return FileSystem::read($fd, $offset, $length);
   }
@@ -572,7 +572,7 @@ if (!\function_exists('file_operation')) {
    *
    * @return int|bool
    */
-  function file_write($fd, string $buffer, $offset = -1)
+  function file_write($fd = null, string $buffer = null, $offset = -1)
   {
     return FileSystem::write($fd, $buffer, $offset);
   }
@@ -665,7 +665,7 @@ if (!\function_exists('file_operation')) {
    *
    * @return resource
    */
-  function file_uri(string $url, $contexts = null)
+  function file_uri(string $url = '', $contexts = null)
   {
     $retry = 0;
     while (true) {
@@ -697,7 +697,7 @@ if (!\function_exists('file_operation')) {
    *
    * @return string|bool
    */
-  function file_contents($fd, int $size = -1, float $timeout_seconds = 0.5)
+  function file_contents($fd = null, int $size = 256, float $timeout_seconds = 0.5)
   {
     return FileSystem::contents($fd, $size, $timeout_seconds);
   }
@@ -801,7 +801,7 @@ if (!\function_exists('file_operation')) {
    *
    * @return array|string|int|bool
    */
-  function file_meta($fd, ?string $info = null)
+  function file_meta($fd = null, ?string $info = null)
   {
     return FileSystem::meta($fd, $info);
   }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Async;
 
-use Async\Co;
 use Async\Kernel;
 use Async\Coroutine;
 use Psr\Log\LogLevel;
@@ -25,7 +24,7 @@ class AsyncLogger extends AbstractLogger
   protected function _make_log_task($level, $message, array $context = array())
   {
     $loggerId = yield \away($this->log($level, $message, $context), 'true');
-    Co::getLoop()->getTask($loggerId)->taskType('networked');
+    \coroutine()->getTask($loggerId)->taskType('stateless');
     $this->loggerTaskId[$loggerId] = $loggerId;
   }
 
@@ -39,7 +38,7 @@ class AsyncLogger extends AbstractLogger
       foreach (\range(0, \count($this->loggerTaskId)) as $nan)
         yield;
 
-      $current = Co::getLoop()->currentList();
+      $current = \coroutine()->currentList();
       foreach ($this->loggerTaskId as $index => $task) {
         if (!isset($current[$index])) {
           unset($this->loggerTaskId[$index]);

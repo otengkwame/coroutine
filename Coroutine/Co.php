@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Async;
 
 use Fiber;
-use Async\Queue;
+use Async\Misc\Queue;
 use Async\Spawn\Globals;
 use Async\FiberInterface;
 
@@ -200,7 +200,7 @@ final class Co
 
   public static function reset(): void
   {
-    Log::restLogs();
+    Log::resetLogs();
     Globals::reset();
     self::$instance = null;
     self::$timer = null;

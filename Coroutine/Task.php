@@ -7,9 +7,11 @@ namespace Async;
 use Async\Coroutine;
 use Async\TaskInterface;
 use Async\FiberInterface;
+use Async\CancelledError;
+use Async\InvalidStateError;
+use Async\Misc\TaskGroup;
+use Async\Misc\ContextInterface;
 use Async\Spawn\FutureInterface;
-use Async\Exceptions\CancelledError;
-use Async\Exceptions\InvalidStateError;
 
 /**
  * Task is used to schedule coroutines concurrently.
@@ -57,7 +59,7 @@ final class Task implements TaskInterface
   /**
    * The underlying coroutine associated with the task.
    *
-   * @var mixed
+   * @var Coroutine
    */
   protected $coroutine;
 
@@ -82,6 +84,20 @@ final class Task implements TaskInterface
    * @var TaskInterface|FiberInterface
    */
   protected $caller = null;
+
+  /**
+   * @var TaskGroup
+   */
+  protected $taskGroup = null;
+
+  /**
+   *  @var ContextInterface
+   */
+  protected $withTask = null;
+
+  protected $joined = false;
+
+  protected $timer = null;
 
   protected $beforeFirstYield = true;
 
@@ -111,7 +127,7 @@ final class Task implements TaskInterface
   /**
    * Task type indicator.
    *
-   * Currently using types of either `paralleled`, `awaited`, `networked`, or `monitored`.
+   * Currently using types of either `paralleled`, `awaited`, `stateless`, or `monitored`.
    *
    * @var string
    */
@@ -139,11 +155,17 @@ final class Task implements TaskInterface
     $this->daemon = null;
     $this->cycles = 0;
     $this->coroutine = null;
-    $this->state = 'closed';
     $this->caller = null;
+    if ($this->taskGroup)
+      $this->taskGroup->discard($this);
+
+    $this->taskGroup = null;
+    $this->withTask = null;
+    $this->joined = null;
+    $this->timer = null;
     $this->result = null;
     $this->sendValue = null;
-    $this->beforeFirstYield = true;
+    $this->beforeFirstYield = null;
     $this->error = null;
     $this->exception = null;
     $this->customState = null;
@@ -151,12 +173,7 @@ final class Task implements TaskInterface
     $this->customData = null;
   }
 
-  /**
-   * Add to counter of the cycles the task has run.
-   *
-   * @return void
-   */
-  public function cyclesAdd()
+  public function cyclesAdd(): void
   {
     $this->cycles++;
   }
@@ -216,59 +233,64 @@ final class Task implements TaskInterface
     return $this->customData;
   }
 
-  public function exception(): ?\Exception
+  public function exception(): ?\Throwable
   {
     return $this->error;
   }
 
   public function isCustomState($state): bool
   {
-    return ($this->customState === $state);
+    return $this->customState === $state;
   }
 
   public function isParallel(): bool
   {
-    return ($this->taskType == 'paralleled');
+    return $this->taskType === 'paralleled';
   }
 
-  public function isNetwork(): bool
+  public function isStateless(): bool
   {
-    return ($this->taskType == 'networked');
+    return $this->taskType === 'stateless';
+  }
+
+  public function isAsync(): bool
+  {
+    return $this->taskType === 'async';
   }
 
   public function isFuture(): bool
   {
-    return ($this->state == 'process');
+    return $this->state === 'process';
   }
 
   public function isErred(): bool
   {
-    return ($this->state == 'erred');
+    return $this->state === 'erred';
   }
 
   public function isPending(): bool
   {
-    return ($this->state == 'pending');
+    return $this->state === 'pending';
   }
 
   public function isCancelled(): bool
   {
-    return ($this->state == 'cancelled');
+    return $this->state === 'cancelled';
   }
 
   public function isSignaled(): bool
   {
-    return ($this->state == 'signaled');
+    return $this->state === 'signaled';
   }
 
   public function isCompleted(): bool
   {
-    return ($this->state == 'completed');
+    return $this->state === 'completed';
   }
 
   public function isRescheduled(): bool
   {
-    return ($this->state == 'rescheduled');
+    return ($this->state === 'rescheduled');
   }
 
   public function isFinished(): bool
@@ -280,17 +302,46 @@ final class Task implements TaskInterface
 
   public function hasCaller(): bool
   {
-    return ($this->caller !== null);
+    return $this->caller !== null;
   }
 
-  public function setCaller($taskFiber = null): void
+  public function setCaller($caller = null): void
   {
-    $this->caller = $taskFiber;
+    $this->caller = $caller;
   }
 
   public function getCaller()
   {
     return $this->caller;
+  }
+
+  public function hasWith(): bool
+  {
+    return $this->withTask !== null;
+  }
+
+  public function getWith(): ?ContextInterface
+  {
+    return $this->withTask;
+  }
+
+  public function setWith(ContextInterface $context = null): self
+  {
+    $this->withTask = $context;
+
+    return $this;
+  }
+
+  public function getTimer()
+  {
+    return $this->timer;
+  }
+
+  public function setTimer($timer = null): self
+  {
+    $this->timer = $timer;
+
+    return $this;
   }
 
   public function setResult($value): void
@@ -316,16 +367,18 @@ final class Task implements TaskInterface
       $throwable = $error->getPrevious();
       $class = \get_class($error);
       $message = \str_replace(self::ERROR_MESSAGES, '', $message);
-      $this->close();
+      $parent = \get_parent_class($error);
+      if ($parent === false || \strpos($parent, 'Async\\') !== false || $parent === 'Exception')
+        $this->close();
+
       return new $class($message, $code, $throwable);
     } else {
-      // @codeCoverageIgnoreStart
+      $tid = $this->taskId();
       $this->close();
-      if (!$this->isNetwork())
-        throw new InvalidStateError();
+      if (!$this->isStateless())
+        throw new InvalidStateError("{$tid}");
 
       return null;
-      // @codeCoverageIgnoreEnd
     }
   }
 
@@ -341,7 +394,7 @@ final class Task implements TaskInterface
         ? $this->coroutine->throw($this->exception)
         : $this->exception;
 
-      if (!$this->isNetwork())
+      if (!$this->isStateless())
         $this->error = $this->exception;
 
       $this->exception = null;
@@ -351,11 +404,55 @@ final class Task implements TaskInterface
         ? $this->coroutine->send($this->sendValue)
         : $this->sendValue;
 
-      if (!empty($value) && !$this->isNetwork())
+      if (!empty($value) && !$this->isStateless())
         $this->result = $value;
 
       $this->sendValue = null;
       return $value;
     }
+  }
+
+  public function hasGroup(): bool
+  {
+    return ($this->taskGroup !== null);
+  }
+
+  public function setGroup(TaskGroup $taskGroup = null): void
+  {
+    $this->taskGroup = $taskGroup;
+  }
+
+  public function getGroup(): ?TaskGroup
+  {
+    return $this->taskGroup;
+  }
+
+  public function discardGroup(): void
+  {
+    if ($this->taskGroup)
+      $this->taskGroup->task_discard($this);
+  }
+
+  public function doneGroup(): void
+  {
+    if ($this->taskGroup)
+      $this->taskGroup->task_done($this);
+  }
+
+  public function join()
+  {
+    yield $this->wait();
+    $this->discardGroup();
+    $this->joined = true;
+    if ($this->error)
+      \panic($this->error);
+    else
+      return $this->result;
+  }
+
+  public function wait()
+  {
+    while (!$this->isFinished())
+      yield;
   }
 }

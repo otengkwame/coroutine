@@ -88,7 +88,7 @@ if (!\function_exists('logger_instance')) {
       yield \logger_close();
     }
 
-    yield Log::restLogs();
+    yield Log::resetLogs();
   }
 
   /**

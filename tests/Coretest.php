@@ -21,7 +21,7 @@ class CoreTest extends TestCase
                 $this->task .= "Child task $tid still alive!\n";
                 yield;
             }
-        } catch (\Async\Exceptions\CancelledError $e) {
+        } catch (\Async\CancelledError $e) {
         }
     }
 
@@ -46,7 +46,7 @@ class CoreTest extends TestCase
     {
         $this->task = '';
 
-        \coroutine_instance();
+        \coroutine();
         \coroutine_create(\awaitAble([$this, 'parentTask']));
         \coroutine_run();
 

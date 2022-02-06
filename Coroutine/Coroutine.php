@@ -17,11 +17,11 @@ use Async\Parallel;
 use Async\ParallelInterface;
 use Async\Signaler;
 use Async\TaskInterface;
-use Async\ReturnValueCoroutine;
-use Async\PlainValueCoroutine;
+use Async\ReturnValue;
+use Async\PlainValue;
 use Async\CoroutineInterface;
-use Async\Exceptions\CancelledError;
-use Async\Exceptions\InvalidArgumentException;
+use Async\CancelledError;
+use Async\InvalidArgumentException;
 use Async\Fiber;
 use Async\FiberInterface;
 
@@ -60,6 +60,20 @@ final class Coroutine implements CoroutineInterface
    * @var TaskInterface[]|FiberInterface[]
    */
   protected $completedMap = [];
+
+  /**
+   * List of `TaskGroup` Results
+   *
+   * @var array[] [taskId => result]
+   */
+  protected $taskGroupMap = [];
+
+  /**
+   * List of `cancelled` tasks
+   *
+   * @var array[] [taskId => true]
+   */
+  protected $cancelledMap = [];
 
   /**
    * Queue of `Task`, holding all created `coroutines/generators`
@@ -235,6 +249,8 @@ final class Coroutine implements CoroutineInterface
     $this->useUv = false;
     $this->taskMap = [];
     $this->completedMap = [];
+    $this->taskGroupMap = null;
+    $this->cancelledMap = null;
     $this->timers = [];
     $this->waitingForRead = [];
     $this->waitingForWrite = [];
@@ -483,10 +499,13 @@ final class Coroutine implements CoroutineInterface
       && \function_exists('posix_kill');
   }
 
-  public function createTask(\Generator $coroutine)
+  public function createTask(\Generator $coroutine, bool $isAsync = false): int
   {
     $tid = ++$this->maxTaskId;
     $task = new Task($tid, $coroutine);
+    if ($isAsync)
+      $task->taskType('async');
+
     $this->taskMap[$tid] = $task;
     $this->schedule($task);
     if (Co::getUnique('parent') === null && \count($this->taskMap) === 1)
@@ -588,6 +607,11 @@ final class Coroutine implements CoroutineInterface
     $this->close();
   }
 
+  public function cancelledList(): ?array
+  {
+    return $this->cancelledMap;
+  }
+
   public function cancelTask(int $tid, $customState = null, string $errorMessage = 'Invalid task ID!')
   {
     if (!isset($this->taskMap[$tid])) {
@@ -601,6 +625,7 @@ final class Coroutine implements CoroutineInterface
         $task->close();
         $task->setState('cancelled');
         unset($this->taskQueue[$i]);
+        $this->cancelledMap[$tid] = true;
         break;
       } elseif ($task->taskId() === $tid) {
         if ($task->getCustomData() instanceof \UVFsEvent)
@@ -612,6 +637,7 @@ final class Coroutine implements CoroutineInterface
 
         $task->setState('cancelled');
         unset($this->taskQueue[$i]);
+        $this->cancelledMap[$tid] = true;
         break;
       }
     }
@@ -631,6 +657,7 @@ final class Coroutine implements CoroutineInterface
             $task->close();
             $task->setState('cancelled');
             unset($this->taskQueue[$i]);
+            $this->cancelledMap[$channelTask] = true;
             break;
           }
         }
@@ -663,7 +690,7 @@ final class Coroutine implements CoroutineInterface
 
   public function isCompleted(int $tid): bool
   {
-    return !isset($this->completedMap[$tid]);
+    return isset($this->completedMap[$tid]);
   }
 
   public function getCompleted(int $tid)
@@ -696,6 +723,26 @@ final class Coroutine implements CoroutineInterface
 
       $this->completedMap = $completeList;
     }
+  }
+
+  public function isGroup(int $tid): bool
+  {
+    return isset($this->taskGroupMap[$tid]);
+  }
+
+  public function getGroup(): ?array
+  {
+    return $this->taskGroupMap;
+  }
+
+  public function getGroupResult(int $tid)
+  {
+    return $this->taskGroupMap[$tid];
+  }
+
+  public function setGroupResult(int $tid, $value): void
+  {
+    $this->taskGroupMap[$tid] = $value;
   }
 
   public function ioStop()
@@ -787,6 +834,7 @@ final class Coroutine implements CoroutineInterface
   public function execute($isReturn = false)
   {
     while (!$this->taskQueue->isEmpty()) {
+      /** @var TaskInterface|FiberInterface */
       $task = $this->taskQueue->dequeue();
       if ($task instanceof FiberInterface) {
         $this->executeFiber($task);
@@ -811,24 +859,31 @@ final class Coroutine implements CoroutineInterface
           continue;
         }
 
-        if ($task->isCancelled()) {
-          $this->cancelTask($task->taskId());
-        } elseif ($task->isFinished()) {
-
+        if ($task->isFinished()) {
           $this->cancelProgress($task);
           $id = $task->taskId();
-          if ($task->isNetwork()) {
+          if ($task->isStateless()) {
             $task->close();
           } else {
+            $state = $task->getState();
             $task->setState('completed');
+            $isTaskGroup = $task->hasGroup();
+            if ($isTaskGroup)
+              $task->doneGroup();
+
             if ($task->hasCaller()) {
               $unjoined = $task->getCaller();
               $task->setCaller();
+              $final = $task->exception();
               $result = $task->result();
-              $unjoined->sendValue($result);
+              $this->taskGroupMap[$id] = ($state === 'erred') ? $final : $result;
+              $unjoined->sendValue($this->taskGroupMap[$id]);
               $this->schedule($unjoined);
-            } else {
-              $this->completedMap[$id] = $task;
+            } elseif (!$isTaskGroup) {
+              if ($task->exception() instanceof CancelledError)
+                $this->cancelTask($id);
+              else
+                $this->completedMap[$id] = $task;
             }
           }
 
@@ -1115,15 +1170,52 @@ final class Coroutine implements CoroutineInterface
       0,
       $this->onTimer
     );
+
+    return $timer;
   }
 
-  public function addTimeout($task, float $timeout)
+  public function clearTimeout(TaskInterface $task): void
+  {
+    $timer = $task->getTimer();
+    if ($this->isUv() && $timer instanceof \UVTimer && \uv_is_active($timer)) {
+      @\uv_timer_stop($timer);
+      \uv_unref($timer);
+      unset($this->timers[(int) $timer]);
+      $task->setTimer();
+    } elseif (\is_float($timer)) {
+      foreach ($this->timers as $index => $timers) {
+        if ($timers[0] === $timer) {
+          unset($this->timers[$index]);
+          $task->setTimer();
+          break;
+        }
+      }
+    }
+  }
+
+  public function addTimeout($task = null, float $timeout = 0.0, int $tid = null)
   {
     if ($this->isUv()) {
-      return $this->addTimer((int) \round($timeout * 1000), $task);
+      $interval = (int) \round($timeout * 1000);
+      $timer = \uv_timer_init($this->uv);
+      $this->timers[(int) $timer] = [$interval, $task];
+      \uv_timer_start(
+        $timer,
+        $interval,
+        0,
+        $this->onTimer
+      );
+
+      if (\is_integer($tid))
+        $this->getTask($tid)->setTimer($timer);
+
+      return;
     }
 
     $triggerTime = $this->timestamp() + ($timeout);
+    if (\is_integer($tid))
+      $this->getTask($tid)->setTimer($triggerTime);
+
     if (!$this->timers) {
       // Special case when the timers array was empty.
       $this->timers[] = [$triggerTime, $task];
@@ -1155,12 +1247,12 @@ final class Coroutine implements CoroutineInterface
 
   public static function value($value)
   {
-    return new ReturnValueCoroutine($value);
+    return new ReturnValue($value);
   }
 
   public static function plain($value)
   {
-    return new PlainValueCoroutine($value);
+    return new PlainValue($value);
   }
 
   /**
@@ -1219,7 +1311,7 @@ final class Coroutine implements CoroutineInterface
           continue;
         }
 
-        $isReturnValue = $value instanceof ReturnValueCoroutine;
+        $isReturnValue = $value instanceof ReturnValue;
         if (!$gen->valid() || $isReturnValue) {
           if ($stack->isEmpty()) {
             return;
@@ -1235,7 +1327,7 @@ final class Coroutine implements CoroutineInterface
           continue;
         }
 
-        if ($value instanceof PlainValueCoroutine) {
+        if ($value instanceof PlainValue) {
           $value = $value->getValue();
         }
 

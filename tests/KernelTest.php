@@ -7,12 +7,12 @@ use function Async\Worker\spawn_task;
 use Async\Kernel;
 use Async\TaskInterface;
 use Async\CoroutineInterface;
-use Async\Exceptions\Panicking;
-use Async\Exceptions\TimeoutError;
-use Async\Exceptions\CancelledError;
-use Async\Exceptions\LengthException;
-use Async\Exceptions\InvalidStateError;
-use Async\Exceptions\InvalidArgumentException;
+use Async\Panicking;
+use Async\TimeoutError;
+use Async\CancelledError;
+use Async\LengthException;
+use Async\InvalidStateError;
+use Async\InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 class KernelTest extends TestCase
@@ -141,9 +141,8 @@ class KernelTest extends TestCase
       throw new CancelledError('closure cancelled!');
     });
 
-    // echo __LINE__;
     $this->expectException(CancelledError::class);
-    $one = yield \away('cancelledLabel');
+    $one = yield \away(cancelledLabel);
     yield \gather($one);
     yield \shutdown();
   }
@@ -182,7 +181,7 @@ class KernelTest extends TestCase
     });
 
     $two = yield \away($this->already(2));
-    $three =  yield \away('already', 3);
+    $three =  yield \away(already, 3);
     $result = yield \gather($one, $two, $three);
 
     $this->assertEquals([3 => '1', 4 => 2, 5 => 3], $result);
@@ -208,7 +207,7 @@ class KernelTest extends TestCase
       throw new \Exception('closure error!');
     });
 
-    $three =  yield \away('errorLabel');
+    $three =  yield \away(errorLabel);
     $result = yield \gather_wait([$one, $three], 0, false);
     $this->assertEquals([3 => '1', 4 => (new \Exception('closure error!'))], $result);
     yield \shutdown();

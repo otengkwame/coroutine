@@ -50,7 +50,7 @@ function main()
     try {
         // will throw exception and stop/kill progress printout '.' after 1 seconds
         yield \wait_for(\repeat(), 1);
-    } catch (\Async\Exceptions\TimeoutError $e) {
+    } catch (\Async\TimeoutError $e) {
         $results = yield \gather($coroutinesId);
     }
 };

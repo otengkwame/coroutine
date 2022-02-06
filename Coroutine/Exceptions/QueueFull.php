@@ -1,8 +1,8 @@
 <?php
 
-namespace Async\Exceptions;
+namespace Async;
 
-use Async\Exceptions\RuntimeException;
+use Async\RuntimeException;
 
 /**
  * Throws when the `Queue::put_nowait()` method is called on a **full** `Queue`.

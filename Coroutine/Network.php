@@ -41,7 +41,7 @@ final class Network
    */
   protected static function isUv(): bool
   {
-    $co = \coroutine_instance();
+    $co = \coroutine();
     return ($co instanceof CoroutineInterface && $co->isUvActive() && self::$useUV);
   }
 
@@ -74,7 +74,7 @@ final class Network
   public static function stop(int $listener)
   {
     self::$isRunning[$listener] = false;
-    $co = \coroutine_instance();
+    $co = \coroutine();
     yield self::close($co->getTask($listener)->getCustomData());
     try {
       yield \cancel_task($listener);
@@ -95,7 +95,7 @@ final class Network
       return \value(false);
     }
 
-    $co = \coroutine_instance();
+    $co = \coroutine();
     if ($co instanceof CoroutineInterface && $co->isUv() && $useUv) {
       return new Kernel(
         function (TaskInterface $task, CoroutineInterface $coroutine) use ($hostname) {
@@ -187,7 +187,7 @@ final class Network
   public static function listenerTask(callable $handler)
   {
     return Kernel::away(function () use ($handler) {
-      $co = \coroutine_instance();
+      $co = \coroutine();
       $tid = yield \stateless_task();
       self::$isRunning[$tid] = true;
       while (self::$isRunning[$tid]) {
@@ -199,7 +199,7 @@ final class Network
             return yield $handler($clientConnectionOrData);
           });
 
-          $co->getTask($newId)->taskType('networked');
+          $co->getTask($newId)->taskType('stateless');
         }
       }
 
@@ -223,7 +223,7 @@ final class Network
       return yield new Kernel(
         function (TaskInterface $task, CoroutineInterface $coroutine) use ($server, $listenerTask, $backlog) {
           $task->customData($server);
-          $task->taskType('networked');
+          $task->taskType('stateless');
           $coroutine->ioAdd();
           if ($server instanceof \UVUdp) {
             \uv_udp_recv_start($server, function ($stream, $status, $data) use ($task, $coroutine, $listenerTask) {
@@ -276,7 +276,7 @@ final class Network
     return new Kernel(
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($client, $listenerTask) {
         $task->customData($client);
-        $task->taskType('networked');
+        $task->taskType('stateless');
         $listen = $coroutine->getTask($listenerTask);
         $listen->sendValue([$listenerTask, $task->taskId(), $client]);
         $coroutine->schedule($listen);
@@ -535,7 +535,7 @@ final class Network
     if (\strpos($address, ':') === false)
       $ip = \uv_ip4_addr($address, $port);
 
-    $uv = \coroutine_instance()->getUV();
+    $uv = \coroutine()->getUV();
     switch ($scheme) {
       case 'file':
       case 'unix':
@@ -572,7 +572,7 @@ final class Network
       return yield new Kernel(
         function (TaskInterface $task, CoroutineInterface $coroutine) use ($server) {
           $task->customData($server);
-          $task->taskType('networked');
+          $task->taskType('stateless');
           $coroutine->ioAdd();
           if ($server instanceof \UVUdp) {
             \uv_udp_recv_start($server, function ($stream, $status, $data) use ($task, $coroutine) {

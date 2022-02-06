@@ -2,13 +2,28 @@
 
 namespace Async;
 
+use Async\Misc\TaskGroup;
+use Async\Misc\ContextInterface;
+
 /**
  * Provides a way for a task to interrupt itself and pass control back
  * to the scheduler, and allowing some other task to run.
  */
 interface TaskInterface
 {
+  /**
+   * The task’s id.
+   *
+   * @return integer|null
+   */
   public function taskId(): ?int;
+
+  /**
+   * Add to counter of the cycles the task has run.
+   *
+   * @return void
+   */
+  public function cyclesAdd(): void;
 
   /**
    * Return the number of times the scheduled task has run.
@@ -18,8 +33,8 @@ interface TaskInterface
   public function getCycles(): int;
 
   /**
-   * Set Task type, currently either `paralleled`, `awaited`,
-   * `networked`, or `monitored`.
+   * Set Task type, currently either `paralleled`, `async`, `awaited`,
+   * `stateless`, or `monitored`.
    *
    * @param string $type
    *
@@ -103,15 +118,22 @@ interface TaskInterface
   public function isParallel(): bool;
 
   /**
-   * A flag that indicates the task is `socket/stream` related, aka `stateless` and nothing will be stored.
+   * A flag that indicates the task is `stateless`, nothing will be stored for later.
    * - All memory is freed, not in completed task list, and no results retained.
    *
    * @return bool
    */
-  public function isNetwork(): bool;
+  public function isStateless(): bool;
 
   /**
-   * A flag that indicates whether or not the sub future task has started.
+   * A flag that indicates the task is a `async` created function, a **closure**.
+   *
+   * @return bool
+   */
+  public function isAsync(): bool;
+
+  /**
+   * A flag that indicates whether or not the `future` chid-process task has started.
    *
    * @return bool
    */
@@ -152,12 +174,23 @@ interface TaskInterface
    */
   public function isCompleted(): bool;
 
+  /**
+   * A flag that indicates whether or not the task has been **scheduled** to run again.
+   *
+   * @return boolean
+   */
   public function isRescheduled(): bool;
 
+  /**
+   * Returns false if the **generator/coroutine** has been closed, true otherwise.
+   *
+   * @return boolean
+   */
   public function isFinished(): bool;
 
   /**
-   * Does `Task` hold another _task_ to **schedule** on completion.
+   * Check `Task` has another _task_ to **schedule** on _completion/termination_.
+   *
    * @return bool
    *
    * @internal
@@ -165,20 +198,103 @@ interface TaskInterface
   public function hasCaller(): bool;
 
   /**
-   * @param TaskInterface|FiberInterface|null $taskFiber
+   * Set the task for scheduling a return to, from a `join()` or _function_ now controlling.
+   *
+   * @param TaskInterface|FiberInterface|null $caller
    * @return void
    *
    * @internal
    */
-  public function setCaller($taskFiber = null): void;
+  public function setCaller($caller = null): void;
 
   /**
+   * Get the `task` that a `join()` or function _no longer_ in control of.
+   *
    * @return TaskInterface|FiberInterface
    *
    * @internal
    */
   public function getCaller();
 
+  /**
+   * Check task is _actively_ being used by `async_with` or `with`.
+   *
+   * @return boolean
+   */
+  public function hasWith(): bool;
+
+  /**
+   * Get the context manager instance used by `async_with` or `with`.
+   *
+   * @return ContextInterface|null
+   */
+  public function getWith(): ?ContextInterface;
+
+  /**
+   * Set the context manager instance initialized by `async_with` or `with`.
+   *
+   * @param ContextInterface|null $context
+   * @return self
+   */
+  public function setWith(ContextInterface $context = null): self;
+
+  /**
+   * Check for a `TaskGroup` task.
+   *
+   * @return boolean
+   */
+  public function hasGroup(): bool;
+
+  /**
+   * Set to containing task group.
+   *
+   * @param TaskGroup|null $taskGroup
+   * @return void
+   */
+  public function setGroup(TaskGroup $taskGroup = null): void;
+
+  /**
+   * Containing task group (if any).
+   *
+   * @return TaskGroup|null
+   */
+  public function getGroup(): ?TaskGroup;
+
+  /**
+   * Mark task completed in task group.
+   *
+   * @return void
+   */
+  public function doneGroup(): void;
+
+  /**
+   * Discard task from the `TaskGroup`.
+   *
+   * @return void
+   */
+  public function discardGroup(): void;
+
+  /**
+   * Pending timeout (if any).
+   *
+   * @return int|\UVTimer
+   */
+  public function getTimer();
+
+  /**
+   * Store/clear the timeout that was setup.
+   *
+   * @param int|\UVTimer|null $timer
+   * @return self
+   */
+  public function setTimer($timer = null): self;
+
+  /**
+   * Manually set the result for `result()` when called.
+   *
+   * @param mixed $value
+   * @return void
+   */
   public function setResult($value): void;
 
   /**
@@ -196,9 +312,26 @@ interface TaskInterface
   public function result();
 
   /**
+   * Wait for a task to terminate.
+   * Returns the return value (if any) or throw a `Exception` if the task crashed with an exception.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @return mixed
+   * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/task.py#L177
+   */
+  public function join();
+
+  /**
+   * Wait for a task to terminate. Does not return any value.
+   *
+   * @return void
+   */
+  public function wait();
+
+  /**
    * Mark the task as done and set an exception.
    *
-   * @param \Exception $exception
+   * @param \Throwable $exception
    *
    * @return void
    *
@@ -219,5 +352,5 @@ interface TaskInterface
    *
    * @see https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.exception
    */
-  public function exception(): ?\Exception;
+  public function exception(): ?\Throwable;
 }

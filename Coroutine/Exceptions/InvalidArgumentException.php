@@ -1,8 +1,8 @@
 <?php
 
-namespace Async\Exceptions;
+namespace Async;
 
-use Async\Exceptions\Panicking;
+use Async\Panicking;
 
 class InvalidArgumentException extends \InvalidArgumentException implements Panicking
 {

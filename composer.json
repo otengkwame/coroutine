@@ -4,6 +4,7 @@
     "keywords": [
         "cooperative",
         "multitasking",
+        "asynchronous",
         "coroutine",
         "task",
         "yield",
@@ -39,6 +40,7 @@
     "require": {
         "php": ">7.1",
         "psr/log": ">1.0",
+        "psr/container": ">2.0",
         "symplely/spawn": "^4.0.2"
     },
     "autoload": {
@@ -56,6 +58,7 @@
             "Async\\": [
                 "Coroutine/",
                 "Coroutine/Logger/",
+                "Coroutine/Misc/",
                 "Coroutine/Exceptions/",
                 "Coroutine/Fiber/"
             ],
@@ -84,6 +87,7 @@
         "test": "vendor/bin/phpunit --bootstrap vendor/autoload.php tests"
     },
     "provide": {
-        "psr/log-implementation": "1.0.0"
+        "psr/container": "^1.0",
+        "psr/log-implementation": "^1.0.0"
     }
 }

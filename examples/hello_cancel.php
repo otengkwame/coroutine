@@ -7,9 +7,6 @@
 
 include 'vendor/autoload.php';
 
-use Async\Exceptions\TimeoutError;
-use Async\Exceptions\CancelledError;
-
 async('countdown', function ($n) {
   while ($n > 0) {
     print('T-minus ' . $n . EOL);
@@ -23,9 +20,11 @@ async('kid', function ($x, $y) {
     yield print('Getting around to doing my homework' . EOL);
     yield await(sleep, 1000);
     return $x * $y;
-  } catch (CancelledError $e) {
+  } catch (Async\CancelledError $e) {
     print("No go diggy die!" . EOL);
-    //throw $e;
+    // yield raise();
+    // --Same as--
+    // throw $e;
     yield shutdown();
   }
 });
@@ -38,9 +37,9 @@ async('parent', function () {
 
   print("Are you done yet?" . EOL);
   try {
-    $result = yield timeout_after(10, join_task, $kid_task);
+    $result = yield timeout_after(10, join_task($kid_task));
     print("Result: " . $result);
-  } catch (TimeoutError $e) {
+  } catch (Async\TaskTimeout $e) {
     print("We've got to go!" . EOL);
     yield cancel_task($kid_task);
   }

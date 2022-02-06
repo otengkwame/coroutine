@@ -34,8 +34,8 @@ use function Async\Path\{
 };
 
 use Async\FileSystem;
-use Async\Exceptions\Panic;
-use Async\Exceptions\CancelledError;
+use Async\Panic;
+use Async\CancelledError;
 use PHPUnit\Framework\TestCase;
 
 class FileSystemTest extends TestCase
@@ -495,7 +495,7 @@ class FileSystemTest extends TestCase
                 //    $this->assertEmpty($filename);
             } elseif ($status < 0) {
                 $tid = yield \current_task();
-                $handle = \coroutine_instance()->getTask($tid)->getCustomData();
+                $handle = \coroutine()->getTask($tid)->getCustomData();
                 $this->assertInstanceOf(\UVFsEvent::class, $handle);
                 yield \kill_task();
             }

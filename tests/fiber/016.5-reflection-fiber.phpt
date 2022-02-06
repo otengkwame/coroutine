@@ -91,6 +91,14 @@ array(13) {
 %S    NULL
 %S    ["caller":protected]=>
 %S    NULL
+%S    ["taskGroup":protected]=>
+%S    NULL
+%S    ["withTask":protected]=>
+%S    NULL
+%S    ["joined":protected]=>
+%S    bool(false)
+%S    ["timer":protected]=>
+%S    NULL
 %S    ["beforeFirstYield":protected]=>
 %S    bool(false)
 %S    ["error":protected]=>

@@ -128,7 +128,7 @@ class CoroutineTest extends TestCase
                 $this->task .= "Child task $tid still alive!\n";
                 yield;
             }
-        } catch (\Async\Exceptions\CancelledError $e) {
+        } catch (\Async\CancelledError $e) {
         }
     }
 

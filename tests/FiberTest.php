@@ -6,7 +6,7 @@ use function Async\Fibers\{creating_fiber, starting, resuming, suspending, throw
 
 use Async\Co;
 use Async\Fiber;
-use Async\Exceptions\Panicking;
+use Async\Panicking;
 use PHPUnit\Framework\TestCase;
 
 class FiberTest extends TestCase

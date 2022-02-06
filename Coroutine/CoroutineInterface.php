@@ -7,22 +7,23 @@ use Async\ParallelInterface;
 use Async\FiberInterface;
 use Async\Spawn\Channeled;
 use Async\Spawn\FutureInterface;
-use Async\Exceptions\RuntimeException;
+use Async\RuntimeException;
 
 interface CoroutineInterface
 {
   /**
-   * Creates a new task (using the next free task id),
-   * wraps `coroutine` into a Task and schedule its execution.
+   * Creates a new task (using the next free task id), wraps **Generator**, a `coroutine` into a `Task` and schedule its execution.
    * Returns the `Task` object/id.
    *
-   * @see https://docs.python.org/3.9/library/asyncio-task.html#creating-tasks
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#creating-tasks
    * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
    *
    * @param \Generator $coroutine
-   * @return int task id
+   * @param bool $isAsync should task type be set to a `async` function
+   *
+   * @return int task ID
    */
-  public function createTask(\Generator $coroutine);
+  public function createTask(\Generator $coroutine, bool $isAsync = false): int;
 
   /**
    * Add an new task into the running task queue.
@@ -80,6 +81,8 @@ interface CoroutineInterface
    * @return void
    */
   public function cancelProgress(TaskInterface $task);
+
+  public function cancelledList(): ?array;
 
   /**
    * kill/remove an task using task id,
@@ -166,8 +169,17 @@ interface CoroutineInterface
    *
    * @param Task|\Generator|Callable $task
    * @param float $timeout
+   * @param int $tid task ID
    */
-  public function addTimeout($task, float $timeout);
+  public function addTimeout($task = null, float $timeout = 0.0, int $tid = null);
+
+  /**
+   * Stop the execution of a `Task`'s timeout.
+   *
+   * @param TaskInterface $task
+   * @return void
+   */
+  public function clearTimeout(TaskInterface $task): void;
 
   /**
    * Creates an object instance of the value which will signal to `Coroutine::create` that it's a return value.
@@ -177,7 +189,7 @@ interface CoroutineInterface
    * @internal
    *
    * @param mixed $value
-   * @return ReturnValueCoroutine
+   * @return ReturnValue
    */
   public static function value($value);
 
@@ -187,7 +199,7 @@ interface CoroutineInterface
    * @internal
    *
    * @param mixed $value
-   * @return PlainValueCoroutine
+   * @return PlainValue
    */
   public static function plain($value);
 
@@ -258,6 +270,14 @@ interface CoroutineInterface
    * @return null|TaskInterface|FiberInstance
    */
   public function getTask(?int $taskId = 0);
+
+  public function isGroup(int $tid): bool;
+
+  public function getGroup(): ?array;
+
+  public function getGroupResult(int $tid);
+
+  public function setGroupResult(int $tid, $value): void;
 
   /**
    * Add callable for parallel processing, in an separate php process

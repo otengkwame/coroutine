@@ -2,15 +2,28 @@
 
 declare(strict_types=1);
 
+use Async\CancelledError;
 use Async\Defer;
 use Async\Kernel;
 use Async\Channel;
 use Async\Co;
 use Async\Coroutine;
 use Async\CoroutineInterface;
-use Async\Exceptions\Panic;
+use Async\InvalidStateError;
+use Async\Misc\AsyncIterator;
+use Async\Panic;
+use Async\Panicking;
+use Async\TaskInterface;
+use Async\Misc\TaskGroup;
+use Async\Misc\ContextInterface;
+use Async\Misc\TimeoutAfter;
+use Psr\Container\ContainerInterface;
 
 if (!\function_exists('coroutine_run')) {
+
+  if (!\defined('None'))
+    \define('None', null);
+
   /**
    * Returns a random float between two numbers.
    *
@@ -51,14 +64,16 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * Makes an resolvable function from `label` name that's callable with `await`/`away` and inturn calls **create_task**.
-   * The passed in `function` is wrapped to be `awaitAble`. The `label` will also call `Define()` and make that _name_ a **global** `constant`.
+   * Makes an resolvable function from `label` name that's callable with `coroutine_run`, `go`,
+   * `await`/`away`, `spawner` and inturn calls **create_task**.
+   * The passed in `function` is wrapped to be `awaitAble`. The `label` will be `Define()` and make that _name_ a **global** `constant`.
    *
    * - This will store a closure in `Co` static class with supplied `label` name as key.
-   * @see https://docs.python.org/3.7/reference/compound_stmts.html#async-def
+   * @see https://docs.python.org/3.10/reference/compound_stmts.html#async-def
    *
    * @param string $label
    * @param callable $function
+   * @return void
    * @throws Panic — if the **named** `label` function already exists.
    */
   function async(string $label, callable $function): void
@@ -70,9 +85,216 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * Create a new task that concurrently executes the `async` function.
+   * Allows convenient iteration over asynchronous `Iterator`.
+   * This will obtain `task` results in the order that they complete, as they complete.
+   * - Only `current()`, and `valid()` _methods_ SHOULD BE *implemented* in `Iterator` .
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param AsyncIterator $task A `task` producing _results_ in **chunks**.
+   * @param \Closure $as Will **receive** _chunk_ of a _task_ `result` for processing.
+   * @return void
+   * @see https://docs.python.org/3/reference/compound_stmts.html#the-async-for-statement
    */
-  \define('create_task', 'create_task');
+  function async_for(AsyncIterator $task, \Closure $as)
+  {
+    return Kernel::asyncFor($task, $as);
+  }
+
+  /**
+   * Allows convenient iteration over asynchronous `Iterator`.
+   * This will obtain `task` results in the order that they complete, as they complete.
+   */
+  \define('async_for', 'async_for');
+
+  /**
+   * Begins an asynchronous context manager that is able to suspend execution in its `__enter()` and `__exit()` methods.
+   *  It is a **Error** to use `async_with` outside of an `async` function.
+   *
+   * @see https://book.pythontips.com/en/latest/context_managers.html
+   *
+   * @param ContextInterface|resource $context
+   * @param ContainerInterface|object|ContextInterface|null $object
+   * @param array[] $options
+   * @return ContextInterface
+   * @throws Panic if no context instance, or `__enter()` method does not return `true`.
+   * @todo create `async_for()` to obtain tasks in the order that they complete, as they complete.
+   */
+  function async_with($context = null, $other = null, array $options = []): ContextInterface
+  {
+    return Kernel::asyncWith($context, $other, $options);
+  }
+
+  /**
+   * Begins an asynchronous context manager that is able to suspend execution in its `__enter()` and `__exit()` methods.
+   */
+  \define('async_with', 'async_with');
+
+  /**
+   * Begins an asynchronous context manager that is able to suspend execution in its `__enter()` and `__exit()` methods.
+   * It is a **Error** to use `with` outside of an `async` function.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @see https://book.pythontips.com/en/latest/context_managers.html
+   *
+   * @param ContextInterface|resource $context
+   * @param ContainerInterface|object|null $object
+   * @param array[] $options
+   * @return ContextInterface
+   * @throws Panic if no context instance, or `__enter()` method does not return `true`.
+   */
+  function with($context = null, $object = null, array $options = [], \Closure $as = null)
+  {
+    return Kernel::with($context, $object, $options, $as);
+  }
+
+  /**
+   * Begins an asynchronous context manager that is able to suspend execution in its `__enter()` and `__exit()` methods.
+   */
+  \define('with', 'with');
+
+  /**
+   * Ends an `async_with` or `with` **Context** block, and executes `__exit()` method and any closing _routine_.
+   * - This function **might** need to be prefixed with `yield` depending on _context code_.
+   *
+   * @param ContextInterface $context
+   * @return void
+   * @throws Exception if any `Context` _managed_ code **error's**.
+   * @throws Panic if `__exit()` method does not return `true`.
+   */
+  function __with(ContextInterface $context)
+  {
+    try {
+      return $context();
+    } finally {
+      if (!$context->exited())
+        $context->__exit(new Panic('Context block failed to exit!'));
+    }
+  }
+
+  /**
+   * Ends an `async_with` or `with` **Context** block, and executes `__exit()` method and any closing _routine_.
+   */
+  \define('__with', '__with');
+
+  /**
+   * A `TaskGroup` represents a collection of managed `tasks`. A group can be used to ensure that all tasks terminate together.
+   *
+   * @param array $tasks To monitor and collect results.
+   * @param string $wait - When used as a context manager, will wait until
+   * all contained tasks exit before moving on. The optional wait argument
+   * specifies a strategy.
+   *
+   * If `wait=all` (the default), a task group waits for all tasks to exit.
+   *
+   * If `wait=any`, the group waits for the first task to exit.
+   *
+   * If `wait=object`, the group waits for the first task to return a non-None result.
+   *
+   * If `wait=None`, the group immediately cancels all running tasks.
+   * @return TaskGroup
+   * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/task.py#L271
+   */
+  function task_group(array $tasks = [], $wait = 'all'): TaskGroup
+  {
+    return new TaskGroup($tasks, $wait);
+  }
+
+  /**
+   * A `TaskGroup` represents a collection of managed `tasks`.
+   * A group can be used to ensure that all tasks terminate together.
+   */
+  \define('task_group', 'task_group');
+
+  /**
+   * Returns `all` task _results_ (in `Task Id` creation order).
+   *
+   * @return array
+   */
+  function group_results(TaskGroup $object)
+  {
+    return $object->results();
+  }
+
+  /**
+   * Returns `all` task _results_ (in `Task Id` creation order).
+   */
+  \define('group_results', 'group_results');
+
+  /**
+   * Returns _result_ of the `first` task to exit.
+   *
+   * @return mixed
+   */
+  function group_result(TaskGroup $object)
+  {
+    return $object->result();
+  }
+
+  /**
+   * Returns _result_ of the `first` task to exit.
+   */
+  \define('group_result', 'group_result');
+
+  /**
+   * Returns the _result_ of a completed `task`.
+   *
+   * @param integer $tid task id instance
+   * @return mixed
+   * @throws Exception|Error if _task_ `erred`.
+   * @throws InvalidStateError if still `running`, not terminated.
+   */
+  function result_for(int $tid)
+  {
+    return Kernel::resultFor($tid);
+  }
+
+  /**
+   * Returns the _result_ of a completed `task`.
+   */
+  \define('result_for', 'result_for');
+
+  /**
+   * Returns the _exception_ of a `task`.
+   *
+   * @param integer $tid task id instance
+   * @return null|Throwable
+   * @throws InvalidStateError if _task_ still `running`, not terminated.
+   */
+  function exception_for(int $tid): ?\Throwable
+  {
+    return Kernel::exceptionFor($tid);
+  }
+
+  /**
+   * Returns the _exception_ of a `task`.
+   */
+  \define('exception_for', 'exception_for');
+
+  /**
+   * Check _task_, returns `true` if cancelled.
+   *
+   * @param integer $tid task id instance
+   * @return bool
+   */
+  function is_cancelled(int $tid): bool
+  {
+    return isset(\coroutine()->cancelledList()[$tid]);
+  }
+
+  /**
+   * Check _task_, returns `true` if _currently_, **actively** being cancelled.
+   *
+   * @param integer $tid task id instance
+   * @return bool
+   */
+  function is_cancelling(int $tid): bool
+  {
+    $task = \coroutine()->getTask($tid);
+    if ($task instanceof TaskInterface  && $task->hasGroup() && $task->getGroup()->isWith())
+      return $task->getGroup()->withTask()->exception() instanceof CancelledError;
+
+    return $task instanceof TaskInterface  && $task->exception() instanceof CancelledError;
+  }
 
   /**
    * This function will `pause` and execute the `label` function, with `arguments`,
@@ -83,6 +305,7 @@ if (!\function_exists('coroutine_run')) {
    *
    * - This function needs to be prefixed with `yield`
    *
+   * @see https://www.python.org/dev/peps/pep-0492/#id56
    * @see https://docs.python.org/3.10/reference/expressions.html#await
    *
    * @param string $label `async` function, **reserved** or `PHP` builtin function.
@@ -94,6 +317,13 @@ if (!\function_exists('coroutine_run')) {
   {
     return Kernel::await($label, ...$args);
   }
+
+  /**
+   * This function will `pause` and execute the `label` function, with `arguments`,
+   * only functions created with `async`, or some **reserved**,  or
+   * a `PHP` builtin callable will work, anything else will throw `Panic` exception.
+   */
+  \define('await', 'await');
 
   /**
    * Wrap the **result** with `yield`, or create a `Coroutine::value` object instance of it.
@@ -121,6 +351,11 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * Wrap the **result** with `yield`, or create a `Coroutine::value` object instance of it.
+   */
+  \define('value', 'value');
+
+  /**
    * **Schedule** an `async`, a coroutine _function_ for execution.
    * - This function needs to be prefixed with `yield`
    *
@@ -140,6 +375,11 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
+   * Create a new task that concurrently executes the `async` function.
+   */
+  \define('create_task', 'away');
+
+  /**
    * Run awaitable objects in the tasks set concurrently and block until the condition specified by race.
    *
    * Controls how the `gather()` function operates.
@@ -153,14 +393,14 @@ if (!\function_exists('coroutine_run')) {
    *  propagated to the task that awaits on gather().
    * Other awaitables in the aws sequence won't be cancelled and will continue to run.
    * - If `false`, exceptions are treated the same as successful results, and aggregated in the result list.
-   * @param bool $clear - If `true` (default), close/cancel remaining results
+   * @param bool $clear - If `true`, close/cancel remaining results, `false` (default)
    * @throws \LengthException - If the number of tasks less than the desired $race count.
    *
    * @see https://docs.python.org/3.7/library/asyncio-task.html#waiting-primitives
    *
    * @return array associative `$taskId` => `$result`
    */
-  function gather_wait(array $tasks, int $race = 0, bool $exception = true, bool $clear = true)
+  function gather_wait(array $tasks, int $race = 0, bool $exception = true, bool $clear = false)
   {
     return Kernel::gatherWait($tasks, $race, $exception, $clear);
   }
@@ -205,17 +445,47 @@ if (!\function_exists('coroutine_run')) {
    * @see https://docs.python.org/3.7/library/asyncio-task.html#awaitables
    * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L638
    *
-   * @param Generator|callable $awaitableFunction
+   * @param callable $awaitableFunction
    * @param mixed $args
    *
    * @return \Generator
    *
    * @internal
    */
-  function awaitable(callable $awaitableFunction, ...$args)
+  function awaitable(callable $awaitableFunction = null, ...$args)
   {
     return yield yield $awaitableFunction(...$args);
   }
+
+  /**
+   * Similar to `awaitable`, but used mainly to delay scheduling or executing a regular function/method.
+   * The executing code will be marked as `stateless`, not storing completion results afterwards.
+   * The executing code is not supposed to be made for `yielding`.
+   *
+   * @param int $delay how many times to pause, _`yield` to event loop_, before executing `$function`
+   * @param callable $function
+   * @param mixed $args
+   *
+   * @return mixed
+   *
+   * @internal
+   */
+  function delayer(int $delay = 0, callable $function, ...$args)
+  {
+    if ($delay > 0)
+      foreach (\range(1, $delay) as $nan)
+        yield;
+
+    $result = $function(...$args);
+    yield \stateless_task();
+
+    return $result;
+  }
+
+  /**
+   * Similar to `awaitable`, but used mainly to delay scheduling or executing a regular function/method.
+   */
+  \define('delayer', 'delayer');
 
   /**
    * Block/sleep for delay seconds.
@@ -241,17 +511,19 @@ if (!\function_exists('coroutine_run')) {
   /**
    * Suspends the calling task, allowing other tasks to run.
    */
-  \define('sleep', 'sleep');
+  \define('sleep', 'sleep_for');
 
   /**
-   * Wait for the callable to complete with a timeout.
-   * - This function needs to be prefixed with `yield`
+   * Wait for the `callable` to complete with a timeout.
    *
-   * @see https://docs.python.org/3.9/library/asyncio-task.html#timeouts
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#timeouts
    * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L392
    *
-   * @param Generator|callable $callable
+   * @param callable $callable
    * @param float $timeout
+   * @return mixed
+   * @throws TimeoutError If a timeout occurred into `current` task.
+   * @throws CancelledError If a timeout occurred into `callable` task.
    */
   function wait_for($callable, float $timeout = 0.0)
   {
@@ -265,18 +537,43 @@ if (!\function_exists('coroutine_run')) {
 
   /**
    * Any blocking operation can be cancelled by a timeout.
+   * Throws a `TaskTimeout` exception in the calling task after seconds have elapsed.
+   * This function may be used in two ways. You can apply it to the execution of a single coroutine:
+   *
+   *```php
+   *         yield timeout_after(seconds, coro(args))
+   *
+   * # Or you can use it as an asynchronous context manager to apply a timeout to a block of statements:
+   *
+   *         async_with(timeout_after(seconds));
+   *               // Or
+   *         yield with(timeout_after(seconds));
+   *            yield coro1(args)
+   *            yield coro2(args)
+   *            ...
+   *```
    * - This function needs to be prefixed with `yield`
    *
    * @param float $timeout
    * @param Generator|callable $callable
+   * @param mixed ...$args
    * @return mixed
+   * @throws TaskTimeout If a timeout has occurred.
    * @see https://curio.readthedocs.io/en/latest/reference.html#timeout_after
    * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/time.py#L141
    */
-  function timeout_after(float $timeout, $callable, ...$args)
+  function timeout_after(float $timeout = 0.0, $callable = null, ...$args)
   {
+    if ($callable === null)
+      return new TimeoutAfter($timeout);
+
     return Kernel::timeoutAfter($timeout, $callable, ...$args);
   }
+
+  /**
+   * Any blocking operation can be cancelled by a timeout.
+   */
+  \define('timeout_after', 'timeout_after');
 
   /**
    * **Schedule** an `async`, a coroutine _function_ for execution.
@@ -294,24 +591,26 @@ if (!\function_exists('coroutine_run')) {
    */
   function spawner($awaitableFunction, ...$args)
   {
-    return \away($awaitableFunction, ...$args);
+    return yield Kernel::away($awaitableFunction, ...$args);
   }
 
   /**
    * **Schedule** an `async`, a coroutine _function_ for execution.
    */
-  \define('spawn', 'spawn');
+  \define('spawn', 'spawner');
 
   /**
-   * 	Wait for the task to terminate and return its result.
+   * Wait for a task to terminate.
+   * Returns the return value (if any) or throw a `Exception` if the task crashed with an exception.
    * - This function needs to be prefixed with `yield`
    *
-   * @param integer $tid
-   * @return void
+   * @param integer $tid task id instance
+   * @return mixed
+   * @source https://github.com/dabeaz/curio/blob/27ccf4d130dd8c048e28bd15a22015bce3f55d53/curio/task.py#L177
    */
   function join_task(int $tid)
   {
-    return Kernel::joinTask($tid);
+    return yield Kernel::joinTask($tid);
   }
 
   /**
@@ -322,7 +621,7 @@ if (!\function_exists('coroutine_run')) {
   /**
    * 	Wait for the task to terminate and return its result.
    */
-  \define('join', 'join');
+  \define('join', 'join_task');
 
   /**
    * Create an new task.
@@ -339,14 +638,15 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * kill/remove an task using task id.
+   * Cancel a task by **throwing** a `CancelledError` exception, this will also delay kill/remove
+   * the task, the status of such can be checked with `is_cancelled` and `is_cancelling` functions.
    * Optionally pass custom cancel state and error message for third party code integration.
    * - This function needs to be prefixed with `yield`
    *
    * @see https://docs.python.org/3.10/library/asyncio-task.html#asyncio.Task.cancel
    * @source https://github.com/python/cpython/blob/bb0b5c12419b8fa657c96185d62212aea975f500/Lib/asyncio/tasks.py#L181
    *
-   * @param int $tid
+   * @param int $tid task id instance
    * @param mixed $customState
    * @return bool
    *
@@ -358,21 +658,26 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * kill/remove an task using task id.
+   * Cancel a task by **throwing** a `CancelledError` exception, this will also delay kill/remove
+   * the task, the status of such can be checked with `is_cancelled` and `is_cancelling` functions.
    */
   \define('cancel_task', 'cancel_task');
 
 
   /**
-   * kill/remove an task using task id.
+   * Cancel a task by **throwing** a `CancelledError` exception, this will also delay kill/remove
+   * the task, the status of such can be checked with `is_cancelled` and `is_cancelling` functions.
    */
-  \define('cancel', 'cancel');
+  \define('cancel', 'cancel_task');
 
   /**
-   * kill/remove the current running task.
+   * Cancel _current_ `running` task by **throwing** a `CancelledError` exception, this will also delay kill/remove
+   * `current` task, the status of such can be checked with `is_cancelled` and `is_cancelling` functions.
    * Optionally pass custom `cancel` state for third party code integration.
    *
    * - This function needs to be prefixed with `yield`
+   * @param mixed $customState
+   * @return bool
    */
   function kill_task($customState = null)
   {
@@ -381,21 +686,23 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * kill/remove the current running task.
+   * Cancel _current_ `running` task by **throwing** a `CancelledError` exception, this will also delay kill/remove
+   * `current` task, the status of such can be checked with `is_cancelled` and `is_cancelling` functions.
    */
   \define('kill_task', 'kill_task');
 
   /**
-   * kill/remove the current running task.
+   * Cancel _current_ `running` task by **throwing** a `CancelledError` exception, this will also delay kill/remove
+   * `current` task, the status of such can be checked with `is_cancelled` and `is_cancelling` functions.
    */
-  \define('kill', 'kill');
+  \define('kill', 'kill_task');
 
   /**
    * Returns the current context task ID
    *
    * - This function needs to be prefixed with `yield`
    *
-   * @return int
+   * @return int task id instance
    */
   function current_task()
   {
@@ -408,7 +715,7 @@ if (!\function_exists('coroutine_run')) {
   \define('current_task', 'current_task');
 
   /**
-   * Set current context Task to stateless `networked`, meaning not storing any return values or exceptions on completion.
+   * Set current context Task to stateless, meaning not storing any return values or exceptions on completion.
    * The task is not moved to completed task list.
    * This function will return the current context task ID.
    *
@@ -418,13 +725,27 @@ if (!\function_exists('coroutine_run')) {
    */
   function stateless_task()
   {
-    return Kernel::statelessTask();
+    return \task_type('stateless');
   }
 
   /**
-   * Set current context Task to stateless `networked`, meaning not storing any return values or exceptions on completion.
+   * Set current context Task to stateless, meaning not storing any return values or exceptions on completion.
    */
   \define('stateless_task', 'stateless_task');
+
+  /**
+   * Set current Task context type, currently either `paralleled`, `async`, `awaited`, `stateless`, or `monitored`.
+   * Will return the current task ID.
+   *
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param string $context
+   * @return int
+   */
+  function task_type(string $context = 'async')
+  {
+    return Kernel::taskType($context);
+  }
 
   /**
    * Performs a clean application shutdown, killing tasks/processes, and resetting all data, except **created** `async` functions.
@@ -535,7 +856,12 @@ if (!\function_exists('coroutine_run')) {
     // @codeCoverageIgnoreEnd
   }
 
-  function coroutine_instance(): ?CoroutineInterface
+  /**
+   * Returns current `Coroutine` Loop **instance**.
+   *
+   * @return CoroutineInterface|null
+   */
+  function coroutine(): ?CoroutineInterface
   {
     return Co::getLoop();
   }
@@ -552,7 +878,7 @@ if (!\function_exists('coroutine_run')) {
    */
   function coroutine_clear(bool $unique = true, int $starting = 0): void
   {
-    $coroutine = Co::getLoop();
+    $coroutine = \coroutine();
     if ($coroutine instanceof CoroutineInterface) {
       $coroutine->setup(false);
     }
@@ -563,14 +889,25 @@ if (!\function_exists('coroutine_run')) {
     Co::setUnique('max', ($unique ? \random_int(10000, 9999999999) : $starting));
   }
 
-  function coroutine_create(\Generator $routine = null): CoroutineInterface
+  /**
+   * Creates a new task (using the next free task id), wraps **Generator**, a `coroutine` into a `Task` and schedule its execution.
+   *
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#creating-tasks
+   * @source https://github.com/python/cpython/blob/11909c12c75a7f377460561abc97707a4006fc07/Lib/asyncio/tasks.py#L331
+   *
+   * @param \Generator $routine
+   * @param bool $isAsync should task type be set to a `async` function
+   *
+   * @return CoroutineInterface
+   */
+  function coroutine_create(\Generator $routine = null, bool $isAsync = false): CoroutineInterface
   {
-    $coroutine = \coroutine_instance();
+    $coroutine = \coroutine();
     if (!$coroutine instanceof CoroutineInterface)
       $coroutine = new Coroutine();
 
     if (!empty($routine))
-      $coroutine->createTask($routine);
+      $coroutine->createTask($routine, $isAsync);
 
     return $coroutine;
   }
@@ -590,13 +927,16 @@ if (!\function_exists('coroutine_run')) {
    */
   function coroutine_run($routine = null, ...$args): void
   {
-    if (\is_string($routine) && Co::isFunction($routine))
+    $isAsync = false;
+    if (\is_string($routine) && Co::isFunction($routine)) {
+      $isAsync = true;
       $routine = Co::getFunction($routine)(...$args);
-    elseif (\is_callable($routine))
+    } elseif (\is_callable($routine)) {
       $routine = \awaitable($routine, ...$args);
+    }
 
     if ($routine instanceof \Generator || empty($routine))
-      \coroutine_create($routine)->run();
+      \coroutine_create($routine, $isAsync)->run();
     else
       \panic("Invalid `coroutine` or no `async` function found!");
   }
@@ -715,10 +1055,38 @@ if (!\function_exists('coroutine_run')) {
    *
    * An general purpose function for throwing an Coroutine `Exception`,
    * or some abnormal condition needing to keep an `Task` stack trace.
+   *
+   * @param string|Throwable $message or `new Exception($message)`
+   * @param integer $code
+   * @param \Throwable|null $previous
+   * @throws Exception|Panic
    */
   function panic($message = '', $code = 0, \Throwable $previous = null)
   {
+    // @codeCoverageIgnoreStart
+    if ($message instanceof Panicking)
+      throw $message;
+    // @codeCoverageIgnoreEnd
+
     throw new Panic($message, $code, $previous);
+  }
+
+  /**
+   * - This function needs to be prefixed with `yield`
+   *
+   * @throws Exception|Error
+   *
+   * @codeCoverageIgnoreS
+   */
+  function raise()
+  {
+    try {
+      $exception = coroutine()->getTask(yield current_task())->exception();
+    } catch (\Throwable $th) {
+      yield shutdown();
+    }
+
+    throw $exception;
   }
 
   /**

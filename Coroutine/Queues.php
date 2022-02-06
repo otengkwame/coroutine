@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Async\Queues;
 
 use Async\Co;
-use Async\Queue;
+use Async\Misc\Queue;
 
 if (!\function_exists('queue_clear')) {
 

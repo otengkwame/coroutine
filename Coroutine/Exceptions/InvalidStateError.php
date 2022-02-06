@@ -1,8 +1,8 @@
 <?php
 
-namespace Async\Exceptions;
+namespace Async;
 
-use Async\Exceptions\RuntimeException;
+use Async\RuntimeException;
 
 class InvalidStateError extends RuntimeException
 {

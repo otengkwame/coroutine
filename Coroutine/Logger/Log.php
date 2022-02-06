@@ -62,7 +62,7 @@ final class Log
     return self::$logs;
   }
 
-  public static function restLogs(): void
+  public static function resetLogs(): void
   {
     self::$logs = null;
     self::$log = null;

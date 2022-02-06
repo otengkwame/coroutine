@@ -110,14 +110,14 @@ final class FileSystem
   /**
    * @codeCoverageIgnore
    */
-  protected static function spawnLstat($path, $info = null)
+  protected static function spawnLstat(string $path = '', ?string $info = null)
   {
     $result = yield \await('lstat', $path);
 
     return empty($info) ? $result : $result[$info];
   }
 
-  protected static function fdStat($fd, $info = null)
+  protected static function fdStat($fd = null, $info = null)
   {
     $result = \fstat($fd);
 
@@ -629,7 +629,7 @@ final class FileSystem
    * 12	blocks	number of 512-byte blocks allocated **
    *````
    */
-  public static function lstat(string $path, ?string $info = null)
+  public static function lstat(string $path = '', ?string $info = null)
   {
     if (self::isUv()) {
       return new Kernel(
@@ -681,7 +681,7 @@ final class FileSystem
    * 12	blocks	number of 512-byte blocks allocated **
    *````
    */
-  public static function stat(string $path, ?string $info = null)
+  public static function stat(string $path = '', ?string $info = null)
   {
     if (self::isUv()) {
       return new Kernel(
@@ -733,7 +733,7 @@ final class FileSystem
    * 12	blocks	number of 512-byte blocks allocated **
    *````
    */
-  public static function fstat($fd, ?string $info = null)
+  public static function fstat($fd = null, ?string $info = null)
   {
     if (self::isUv()) {
       return new Kernel(
@@ -956,7 +956,7 @@ final class FileSystem
    * @param int $offset
    * @param int $length
    */
-  public static function sendfile($out_fd, $in_fd, int $offset = 0, int $length = 8192)
+  public static function sendfile($out_fd = null, $in_fd = null, int $offset = 0, int $length = 8192)
   {
     if (self::isUv()) {
       return new Kernel(
@@ -1012,7 +1012,7 @@ final class FileSystem
    * @param int $mode — this should be `S_IRWXU` and some mode flag, `libuv` only.
    * @param resource|array|null $contexts not for `libuv`.
    */
-  public static function open(string $path, string $flag, int $mode = \S_IRWXU, $contexts = null)
+  public static function open(string $path = null, string $flag = 'r', int $mode = \S_IRWXU, $contexts = null)
   {
     if (isset(self::$fileFlags[$flag])) {
       if (self::isUv() && (\strpos($path, '://') === false)) {
@@ -1081,7 +1081,7 @@ final class FileSystem
    * @param int $offset
    * @param int $length
    */
-  public static function read($fd, int $offset = 0, int $length = 8192)
+  public static function read($fd = null, int $offset = 0, int $length = 8192)
   {
     if (self::isUv() && (self::meta($fd, 'wrapper_type') !== 'http')) {
       return new Kernel(
@@ -1143,7 +1143,7 @@ final class FileSystem
    * @param string $buffer
    * @param int|bool $offset if not `UV` set to schedule immediately
    */
-  public static function write($fd, string $buffer, $offset = -1)
+  public static function write($fd = null, string $buffer = null, $offset = -1)
   {
     if (self::isUv() && (self::meta($fd, 'wrapper_type') !== 'http')) {
       return new Kernel(
@@ -1226,7 +1226,7 @@ final class FileSystem
    *
    * @return array|string|int|bool
    */
-  public static function meta($fd, ?string $info = null)
+  public static function meta($fd = null, ?string $info = null)
   {
     if (!\is_resource($fd) && ($info == 'status' || $info == 'size'))
       return $info == 'status' ? 400 : 0;
@@ -1268,7 +1268,7 @@ final class FileSystem
    * @param integer $size
    * @param float $timeout_seconds
    */
-  public static function contents($fd, int $size = 256, float $timeout_seconds = 0.5)
+  public static function contents($fd = null, int $size = 256, float $timeout_seconds = 0.5)
   {
     if (!\is_resource($fd))
       return yield \value(false);

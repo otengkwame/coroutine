@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Async;
+namespace Async\Misc;
 
-use Async\Exceptions\QueueFull;
-use Async\Exceptions\QueueEmpty;
-use Async\Exceptions\LengthException;
+use Async\QueueFull;
+use Async\QueueEmpty;
+use Async\LengthException;
 
 /**
  * A `queue`, useful for coordinating _producer_ and _consumer_ coroutines.
@@ -15,8 +15,6 @@ use Async\Exceptions\LengthException;
  * @see https://curio.readthedocs.io/en/latest/reference.html#queues
  * @see https://docs.python.org/3.10/library/asyncio-queue.html#asyncio-queues
  * @source https://github.com/python/cpython/blob/3.10/Lib/asyncio/queues.py
- *
- * @codeCoverageIgnore
  */
 final class Queue
 {

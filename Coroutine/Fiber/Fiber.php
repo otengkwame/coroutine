@@ -18,7 +18,7 @@ final class Fiber implements FiberInterface
     /**
      * @var TaskInterface|FiberInterface|null
      */
-    protected $taskFiber;
+    protected $caller;
     protected $taskType = 'fiber';
 
     /**
@@ -184,7 +184,7 @@ final class Fiber implements FiberInterface
         $this->fiberStarted = false;
         $this->error = null;
         $this->exception = null;
-        $this->taskFiber = null;
+        $this->caller = null;
         $this->finishResult = null;
     }
 
@@ -203,14 +203,14 @@ final class Fiber implements FiberInterface
         $this->state = $status;
     }
 
-    public function setCaller($taskFiber)
+    public function setCaller($caller)
     {
-        $this->taskFiber = $taskFiber;
+        $this->caller = $caller;
     }
 
     public function getCaller()
     {
-        return $this->taskFiber;
+        return $this->caller;
     }
 
     public function setException($exception)

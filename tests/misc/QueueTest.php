@@ -18,9 +18,10 @@ use function Async\Queues\{
 };
 
 use Async\Co;
-use Async\Queue;
-use Async\Exceptions\CancelledError;
-use Async\Exceptions\TimeoutError;
+use Async\Misc\Queue;
+use Async\CancelledError;
+use Async\TaskTimeout;
+use Async\TimeoutError;
 use PHPUnit\Framework\TestCase;
 
 class QueueTest extends TestCase
@@ -282,7 +283,7 @@ class QueueTest extends TestCase
         $this->results[] = 'consumer waiting';
         $item = yield timeout_after(0.5, queue_get('queue'));
         $this->results[] = 'not here';
-      } catch (TimeoutError $e) {
+      } catch (TaskTimeout $e) {
         $this->results[] = 'consumer timeout';
         yield shutdown();
       }
@@ -309,7 +310,7 @@ class QueueTest extends TestCase
       try {
         yield timeout_after(0.5, queue_put('queue', 1));
         $this->results[] = 'not here';
-      } catch (TimeoutError $e) {
+      } catch (TaskTimeout $e) {
         $this->results[] = 'producer timeout';
         yield shutdown();
       }
@@ -322,4 +323,35 @@ class QueueTest extends TestCase
       'producer timeout'
     ], $this->results);
   }
+  /*
+
+def test_priority_queue(kernel):
+    results = []
+    priorities = [4, 2, 1, 3]
+
+    async def consumer(queue):
+        while True:
+            item = await queue.get()
+            if item[1] is None:
+                break
+            results.append(item[1])
+            await queue.task_done()
+            await sleep(0.2)
+        await queue.task_done()
+
+    async def producer():
+        queue = PriorityQueue()
+
+        for n in priorities:
+            await queue.put((n, n))
+
+        await queue.put((10, None))
+
+        await spawn(consumer(queue))
+
+        await queue.join()
+
+    kernel.run(producer())
+    assert results == sorted(priorities)
+*/
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Async\Exceptions;
+namespace Async;
 
 interface Panicking extends \Throwable
 {
