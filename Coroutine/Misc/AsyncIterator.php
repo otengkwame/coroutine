@@ -24,14 +24,7 @@ abstract class AsyncIterator implements \Iterator
    *
    * @return mixed Can return any type.
    */
-  public function current()
-  {
-    $result =  yield $this;
-    unset($result[1]);
-    $this->next();
-
-    return $result;
-  }
+  abstract public function current();
 
   /**
    * Checks if current position is valid.
@@ -39,10 +32,7 @@ abstract class AsyncIterator implements \Iterator
    *
    * @return bool Returns true on success or false on failure.
    */
-  public function valid(): bool
-  {
-    return !\is_null(\array_key_first([1]));
-  }
+  abstract public function valid(): bool;
 
   /**
    * DO NOT IMPLEMENT, NOT USED.
@@ -51,9 +41,9 @@ abstract class AsyncIterator implements \Iterator
    */
   public function key()
   {
-    static $index;
+    static $index = [];
 
-    return \array_key_first([$index]);
+    return \array_key_first($index);
   }
 
   /**

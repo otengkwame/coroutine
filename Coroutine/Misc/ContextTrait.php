@@ -41,7 +41,7 @@ trait ContextTrait
    * @var \Throwable
    */
   protected $error = null;
-  protected $objectIs = [];
+  protected $isObject = false;
   protected $done = false;
 
   /**
@@ -126,7 +126,7 @@ trait ContextTrait
 
   /**
    * @param resource $context
-   * @param object|null ...$object
+   * @param object|null $object with a `close()` method defined.
    */
   public function __construct($context, ...$object)
   {
@@ -134,10 +134,12 @@ trait ContextTrait
     if (!empty($object))
       $this->instance = \array_shift($object);
 
-    if (\is_object($this->context))
-      $this->objectIs[0] = true;
-    elseif (\is_object($this->instance))
-      $this->objectIs[1] = true;
+    if (\is_object($this->instance)) {
+      if (\method_exists($this->instance, 'close'))
+        $this->isObject = true;
+      else
+        \panic('Not valid object instance, missing `close()` method!');
+    }
   }
 
   public function __invoke()
@@ -155,16 +157,10 @@ trait ContextTrait
       yield $this->withSet();
     }
 
-    $object = null;
-    if (isset($this->objectIs[0]))
-      $object = $this->context;
-    elseif (isset($this->objectIs[1]))
-      $object = $this->instance;
-
-    if (\is_object($object) && \method_exists($object, $function)) {
+    if ($this->isObject && \method_exists($this->instance, $function)) {
       try {
         $this->done = null;
-        return $object->$function(...$args);
+        return $this->instance->$function(...$args);
       } catch (\Throwable $e) {
         $this->done = false;
         $this->error = $e;
@@ -188,12 +184,10 @@ trait ContextTrait
     if ($this->withSet)
       $this->clearWith();
 
-    if (isset($this->objectIs[0]) && \method_exists($this->context, 'close'))
-      $this->context->close();
-    elseif (\is_resource($this->context))
+    if (\is_resource($this->context))
       \fclose($this->context);
 
-    if (isset($this->objectIs[1]) && \method_exists($this->instance, 'close'))
+    if ($this->isObject)
       $this->instance->close();
 
     unset($this->context);

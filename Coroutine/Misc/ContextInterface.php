@@ -144,7 +144,7 @@ interface ContextInterface
   public function __call($function, $args);
 
   /**
-   * Return any PHP builtin or resource like object that was supplied at `__construct($context, $object)`.
+   * Return any PHP builtin or resource like object that was supplied for _context_ at `__construct($context, $object)`.
    *
    * @return resource
    */
