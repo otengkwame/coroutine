@@ -16,13 +16,16 @@ use Async\Panicking;
 use Async\TaskInterface;
 use Async\Misc\TaskGroup;
 use Async\Misc\ContextInterface;
-use Async\Misc\TimeoutAfter;
+use Async\Misc\Semaphore;
 use Psr\Container\ContainerInterface;
 
 if (!\function_exists('coroutine_run')) {
 
   if (!\defined('None'))
     \define('None', null);
+
+  if (!\defined('IS_PHP81'))
+    \define('IS_PHP81', ((float) \phpversion() >= 8.1));
 
   /**
    * Returns a random float between two numbers.
@@ -109,6 +112,7 @@ if (!\function_exists('coroutine_run')) {
   /**
    * Begins an asynchronous context manager that is able to suspend execution in its `__enter()` and `__exit()` methods.
    *  It is a **Error** to use `async_with` outside of an `async` function.
+   * - This function needs to be prefixed with `yield`
    *
    * @see https://book.pythontips.com/en/latest/context_managers.html
    *
@@ -119,7 +123,7 @@ if (!\function_exists('coroutine_run')) {
    * @throws Panic if no context instance, or `__enter()` method does not return `true`.
    * @todo create `async_for()` to obtain tasks in the order that they complete, as they complete.
    */
-  function async_with($context = null, $other = null, array $options = []): ContextInterface
+  function async_with($context = null, $other = null, array $options = [])
   {
     return Kernel::asyncWith($context, $other, $options);
   }
@@ -137,14 +141,13 @@ if (!\function_exists('coroutine_run')) {
    * @see https://book.pythontips.com/en/latest/context_managers.html
    *
    * @param ContextInterface|resource $context
-   * @param ContainerInterface|object|null $object
-   * @param array[] $options
+   * @param \Closure $as - Will receive a **ContextInterface** instance, when finish will execute `__exit()`, the `__with()` function.
    * @return ContextInterface
    * @throws Panic if no context instance, or `__enter()` method does not return `true`.
    */
-  function with($context = null, $object = null, array $options = [], \Closure $as = null)
+  function with($context = null, \Closure $as = null)
   {
-    return Kernel::with($context, $object, $options, $as);
+    return Kernel::with($context, $as);
   }
 
   /**
@@ -153,8 +156,8 @@ if (!\function_exists('coroutine_run')) {
   \define('with', 'with');
 
   /**
-   * Ends an `async_with` or `with` **Context** block, and executes `__exit()` method and any closing _routine_.
-   * - This function **might** need to be prefixed with `yield` depending on _context code_.
+   * Ends an `async_with()` or `with()` **Context** block, and executes `__exit()` method and any closing _routine_.
+   * - This function needs to be prefixed with `yield`
    *
    * @param ContextInterface $context
    * @return void
@@ -164,8 +167,13 @@ if (!\function_exists('coroutine_run')) {
   function __with(ContextInterface $context)
   {
     try {
-      return $context();
+      if ($context() instanceof \Generator)
+        yield $context();
     } finally {
+      if ($context instanceof Semaphore) {
+        yield $context->release();
+      }
+
       if (!$context->exited())
         $context->__exit(new Panic('Context block failed to exit!'));
     }
@@ -470,7 +478,7 @@ if (!\function_exists('coroutine_run')) {
    *
    * @internal
    */
-  function delayer(int $delay = 0, callable $function, ...$args)
+  function delayer(int $delay, callable $function, ...$args)
   {
     if ($delay > 0)
       foreach (\range(1, $delay) as $nan)
@@ -564,9 +572,6 @@ if (!\function_exists('coroutine_run')) {
    */
   function timeout_after(float $timeout = 0.0, $callable = null, ...$args)
   {
-    if ($callable === null)
-      return new TimeoutAfter($timeout);
-
     return Kernel::timeoutAfter($timeout, $callable, ...$args);
   }
 

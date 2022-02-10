@@ -29,11 +29,11 @@ class SemaphoreTest extends TestCase
     async('worker', function ($sema, $label) {
       $this->results[] = $label . ' wait';
       $this->results[] = $sema->locked();
-      \async_with($sema);
+      yield async_with($sema);
       $this->assertEquals($sema->value(), 0);
       $this->results[] = $label . ' acquire';
       yield sleep_for(0.25);
-      \__with($sema);
+      yield __with($sema);
       $this->results[] = $label . ' release';
     });
 
@@ -49,20 +49,36 @@ class SemaphoreTest extends TestCase
 
     \coroutine_run(main);
 
-    $this->assertEquals([
-      'work1 wait',
-      False,
-      'work1 acquire',
-      'work2 wait',
-      True,
-      'work2 acquire',
-      'work1 release',
-      'work3 wait',
-      True,
-      'work3 acquire',
-      'work2 release',
-      'work3 release',
-    ], $this->results);
+    if (\IS_PHP81)
+      $this->assertEquals([
+        'work1 wait',
+        False,
+        'work1 acquire',
+        'work2 wait',
+        True,
+        'work3 wait',
+        True,
+        'work1 release',
+        'work2 acquire',
+        'work2 release',
+        'work3 acquire',
+        'work3 release',
+      ], $this->results);
+    else
+      $this->assertEquals([
+        'work1 wait',
+        False,
+        'work1 acquire',
+        'work2 wait',
+        True,
+        'work1 release',
+        'work2 acquire',
+        'work3 wait',
+        True,
+        'work2 release',
+        'work3 acquire',
+        'work3 release',
+      ], $this->results);
 
     /* Originally
 assert results == [
@@ -89,10 +105,10 @@ assert results == [
     async('worker', function ($sema, $label, $seconds) {
       $this->results[] = $label . ' wait';
       $this->results[] = $sema->locked();
-      \async_with($sema);
+      yield async_with($sema);
       $this->results[] = $label . ' acquire';
       yield sleep_for($seconds);
-      yield \__with($sema);
+      yield __with($sema);
       $this->results[] = $label . ' release';
     });
 
@@ -108,20 +124,36 @@ assert results == [
 
     \coroutine_run(main);
 
-    $this->assertEquals([
-      'work1 wait',            # Both work1 and work2 admitted
-      False,
-      'work1 acquire',
-      'work2 wait',
-      False,
-      'work2 acquire',
-      'work3 wait',
-      false,
-      'work3 acquire',
-      'work1 release',
-      'work2 release',
-      'work3 release',
-    ], $this->results);
+    if (\IS_PHP81)
+      $this->assertEquals([
+        'work1 wait',            # Both work1 and work2 admitted
+        False,
+        'work1 acquire',
+        'work2 wait',
+        False,
+        'work2 acquire',
+        'work3 wait',
+        true,
+        'work1 release',
+        'work3 acquire',
+        'work2 release',
+        'work3 release',
+      ], $this->results);
+    else
+      $this->assertEquals([
+        'work1 wait',            # Both work1 and work2 admitted
+        False,
+        'work1 acquire',
+        'work2 wait',
+        False,
+        'work2 acquire',
+        'work1 release',
+        'work3 wait',
+        False,
+        'work3 acquire',
+        'work2 release',
+        'work3 release',
+      ], $this->results);
 
     /* Originally
 assert results == [
@@ -147,8 +179,8 @@ assert results == [
     async('worker', function ($lck) {
       $this->results[] = 'lock_wait';
       try {
-        async_with($lck);
-        yield \__with($lck);
+        yield async_with($lck);
+        yield __with($lck);
         $this->results[] = 'never here';
       } catch (CancelledError $th) {
         $this->results[] = 'lock_cancel';
@@ -157,14 +189,14 @@ assert results == [
 
     async('worker_cancel', function ($seconds) {
       $lck = new Semaphore();
-      \async_with($lck);
+      yield async_with($lck);
       $task = yield spawner(worker, $lck);
       $this->results[] = 'sleep';
       yield sleep_for($seconds);
       $this->results[] = 'cancel_start';
       yield cancel_task($task);
       $this->results[] = 'cancel_done';
-      \__with($lck);
+      yield __with($lck);
     });
 
     \coroutine_run(worker_cancel, 1);
@@ -178,11 +210,51 @@ assert results == [
     ], $this->results);
   }
 
+  public function test_sema_acquire_cancel_with_as()
+  {
+    $this->results = [];
+
+    async('worker', function ($lck) {
+      $this->results[] = 'lock_wait';
+      try {
+        yield with($lck, function ($lock) {
+          $this->results[] = 'never here';
+        });
+      } catch (CancelledError $th) {
+        $this->results[] = 'lock_cancel';
+      }
+    });
+
+    async('worker_cancel', function ($seconds) {
+      $lck = new Semaphore();
+      yield with(
+        $lck,
+        function (Semaphore $lock) use ($seconds) {
+          $task = yield spawner(worker, $lock);
+          $this->results[] = 'sleep';
+          yield sleep_for($seconds);
+          $this->results[] = 'cancel_start';
+          yield cancel_task($task);
+          $this->results[] = 'cancel_done';
+        }
+      );
+    });
+
+    \coroutine_run(worker_cancel, 1);
+
+    $this->assertEquals([
+      'sleep',
+      'lock_wait',
+      'cancel_start',
+      'lock_cancel',
+      'cancel_done',
+    ], $this->results);
+  }
 
   public function test_sema_acquire_timeout()
   {
     $this->results = [];
-    async('worker', function ($lck) {
+    async('worker', function (Semaphore $lck) {
       $this->results[] = 'lock_wait';
       try {
         yield timeout_after(0.5, $lck->acquire());
@@ -195,23 +267,31 @@ assert results == [
 
     async('worker_timeout', function ($seconds) {
       $lck = new Semaphore();
-      async_with($lck);
+      yield async_with($lck);
       $w = yield spawner(worker, $lck);
       $this->results[] = 'sleep';
       yield sleep_for($seconds);
       $this->results[] = 'sleep_done';
       yield join_task($w);
-      \__with($lck);
+      yield __with($lck);
     });
 
     \coroutine_run(worker_timeout, 1);
 
-    $this->assertEquals([
-      'sleep',
-      'lock_wait',
-      'sleep_done',
-      'lock_timeout',
-    ], $this->results);
+    if (\IS_PHP81)
+      $this->assertEquals([
+        'sleep',
+        'lock_wait',
+        'lock_timeout',
+        'sleep_done',
+      ], $this->results);
+    else
+      $this->assertEquals([
+        'sleep',
+        'lock_wait',
+        'sleep_done',
+        'lock_timeout',
+      ], $this->results);
 
     /* Originally
 assert results == [

@@ -19,12 +19,14 @@ final class Log
   protected static $log = null;
 
 
-  public static function setLog($key = null, LoggerInterface $value): void
+  public static function setLog($key = null, LoggerInterface $value = null): void
   {
-    if ($key === null)
-      self::$log = $value;
-    else
-      self::$logs[$key] = $value;
+    if ($value !== null) {
+      if ($key === null)
+        self::$log = $value;
+      else
+        self::$logs[$key] = $value;
+    }
   }
 
   public static function clearLog($key = null): void

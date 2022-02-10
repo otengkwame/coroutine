@@ -21,6 +21,7 @@ class EventTest extends TestCase
   {
     \coroutine_clear(false);
   }
+
   public function test_event_get_wait()
   {
     $this->results = [];
@@ -132,7 +133,7 @@ class EventTest extends TestCase
   public function test_event_wait_timeout()
   {
     $this->results = [];
-    async('event_waiter', function ($evt) {
+    async('event_waiter', function (Event $evt) {
       $this->results[] = 'event_wait';
       try {
         yield timeout_after(0.5, $evt->wait());
@@ -149,18 +150,31 @@ class EventTest extends TestCase
       yield sleep_for($seconds);
       $this->results[] = 'sleep_done';
       yield join_task($task);
-      $this->results[] = 'all_done';
     });
 
     \coroutine_run(event_run, 1);
-
-    $this->assertEquals([
-      'sleep',
-      'event_wait',
-      'sleep_done',
-      'event_timeout',
-      'all_done',
-    ], $this->results);
+    /*
+        assert results == [
+            'sleep',
+            'event_wait',
+            'event_timeout',
+            'sleep_done',
+        ]
+*/
+    if (\IS_PHP81)
+      $this->assertEquals([
+        'sleep',
+        'event_wait',
+        'event_timeout',
+        'sleep_done'
+      ], $this->results);
+    else
+      $this->assertEquals([
+        'sleep',
+        'event_wait',
+        'sleep_done',
+        'event_timeout'
+      ], $this->results);
   }
 
   public function test_event_wait_notimeout()

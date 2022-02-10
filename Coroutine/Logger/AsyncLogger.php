@@ -24,7 +24,6 @@ class AsyncLogger extends AbstractLogger
   protected function _make_log_task($level, $message, array $context = array())
   {
     $loggerId = yield \away($this->log($level, $message, $context), 'true');
-    \coroutine()->getTask($loggerId)->taskType('stateless');
     $this->loggerTaskId[$loggerId] = $loggerId;
   }
 

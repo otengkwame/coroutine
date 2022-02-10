@@ -53,7 +53,7 @@ class TaskGroupTest extends TestCase
 
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(\task_group());
+      $g = yield async_with(\task_group());
       $t1 = yield $g->spawn(child, 1, 1);
       $t2 = yield $g->spawn(child, 2, 2);
       $t3 = yield $g->spawn(child, 3, 3);
@@ -89,7 +89,7 @@ class TaskGroupTest extends TestCase
       yield join_task($t4);
 
       /** @var TaskGroup */
-      $g = async_with(task_group([$t1, $t2, $t3]));
+      $g = yield async_with(task_group([$t1, $t2, $t3]));
       yield $this->evt->set();
       yield $g->add_task($t4);
       yield __with($g);
@@ -118,7 +118,7 @@ class TaskGroupTest extends TestCase
 
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(task_group([], 'any'));
+      $g = yield async_with(task_group([], 'any'));
       $t1 = yield $g->spawn(child, 1, 1);
       $t2 = yield $g->spawn(child2, 2, 2);
       $t3 = yield $g->spawn(child2, 3, 3);
@@ -148,7 +148,7 @@ class TaskGroupTest extends TestCase
 
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(task_group([], 'any'));
+      $g = yield async_with(task_group([], 'any'));
       $t1 = yield $g->spawn(child, 1, '1');
       $t2 = yield $g->spawn(child2, 2, 2);
       $t3 = yield $g->spawn(child2, 3, 3);
@@ -181,7 +181,7 @@ class TaskGroupTest extends TestCase
 
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(task_group());
+      $g = yield async_with(task_group());
       yield $g->spawn(child, 1, 1);
       yield $g->spawn(child, 2, 2);
       yield $g->spawn(child, 3, 3);
@@ -206,7 +206,7 @@ class TaskGroupTest extends TestCase
 
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(task_group([], 'None'));
+      $g = yield async_with(task_group([], 'None'));
       $t2 = yield $g->spawn(child2, 2, 2);
       $t3 = yield $g->spawn(child2, 3, 3);
       yield __with($g);
@@ -228,13 +228,17 @@ class TaskGroupTest extends TestCase
 
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(task_group());
+      $g = yield async_with(task_group());
       $t1 = yield $g->spawn(child, 1, 1);
       $t2 = yield $g->spawn(child, 2, 2);
       $t3 = yield $g->spawn(child, 3, 'bad');
       yield __with($g);
 
-      $this->assertInstanceOf(\Exception::class, exception_for($t3));
+      if (\IS_PHP81)
+        $this->assertInstanceOf(\TypeError::class, exception_for($t3));
+      else
+        $this->assertInstanceOf(\Exception::class, exception_for($t3));
+
       $this->assertEquals($g->completed(), $t3);
       $this->assertTrue(is_cancelled($t1));
       $this->assertTrue(is_cancelled($t2));
@@ -256,7 +260,7 @@ class TaskGroupTest extends TestCase
     async('main', function () {
       try {
         /** @var TaskGroup */
-        $g = async_with(task_group());
+        $g = yield async_with(task_group());
         $t1 = yield $g->spawn(child, 1, 1);
         $t2 = yield $g->spawn(child, 2, 2);
         $t3 = yield $g->spawn(child, 3, 3);
@@ -288,7 +292,7 @@ class TaskGroupTest extends TestCase
 
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(task_group());
+      $g = yield async_with(task_group());
       $t1 = yield $g->spawn(child, 1, 'foo');
       $t2 = yield $g->spawn(child, 2, 2);
       $t3 = yield $g->spawn(child, 3, 3);
@@ -337,7 +341,7 @@ class TaskGroupTest extends TestCase
     async('coro', function () {
       try {
         /** @var TaskGroup */
-        $g = async_with(task_group());
+        $g = yield async_with(task_group());
         $t1 = yield $g->spawn(child);
         $t2 = yield $g->spawn(child);
         $t3 = yield $g->spawn(child);
@@ -410,7 +414,7 @@ class TaskGroupTest extends TestCase
 
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(task_group());
+      $g = yield async_with(task_group());
       $t0 = yield $g->spawn(child, 1, 1);
       $t1 = yield $g->spawn(child, 2, 2);
       $t2 = yield $g->spawn(waiter);
@@ -435,7 +439,7 @@ class TaskGroupTest extends TestCase
   {
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(new TaskGroup());
+      $g = yield async_with(new TaskGroup());
       $t1 = yield $g->spawn(sleep, 0);
       yield test_raises($this, 'Async\RuntimeError', function () use ($g, $t1) {
         yield $g->add_task($t1);
@@ -449,7 +453,7 @@ class TaskGroupTest extends TestCase
   {
     async('main', function () {
       /** @var TaskGroup */
-      $g = async_with(new TaskGroup());
+      $g = yield async_with(new TaskGroup());
       yield __with($g);
 
       $this->assertNull($g->exception());

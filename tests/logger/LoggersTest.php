@@ -10,11 +10,19 @@ use PHPUnit\Framework\TestCase;
 class LoggersTest extends TestCase
 {
   protected $dest = 'stdout2.log';
-  protected $testFile = 'logger-test.log';
+  protected $testFile = 'logger-test2.log';
 
   protected function setUp(): void
   {
     \coroutine_clear(false);
+
+    if (\file_exists(__DIR__ . \DS . $this->dest)) {
+      unlink(__DIR__ . \DS . $this->dest);
+    }
+
+    if (\file_exists(__DIR__ . \DS . $this->testFile)) {
+      unlink(__DIR__ . \DS . $this->testFile);
+    }
   }
 
   protected function tearDown(): void

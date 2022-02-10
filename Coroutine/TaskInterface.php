@@ -133,6 +133,13 @@ interface TaskInterface
   public function isAsync(): bool;
 
   /**
+   * A flag that indicates the task is doing a `self` cancellation.
+   *
+   * @return bool
+   */
+  public function isSelfCancellation(): bool;
+
+  /**
    * A flag that indicates whether or not the `future` chid-process task has started.
    *
    * @return bool

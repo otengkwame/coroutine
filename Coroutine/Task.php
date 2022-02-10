@@ -258,6 +258,11 @@ final class Task implements TaskInterface
     return $this->taskType === 'async';
   }
 
+  public function isSelfCancellation(): bool
+  {
+    return $this->taskType === 'cancellation';
+  }
+
   public function isFuture(): bool
   {
     return $this->state === 'process';

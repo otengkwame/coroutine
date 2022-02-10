@@ -39,7 +39,7 @@
     ],
     "require": {
         "php": ">7.1",
-        "psr/log": "1.1.4",
+        "psr/log": "^1.0.0",
         "psr/container": ">2.0",
         "symplely/spawn": "^4.0.2"
     },

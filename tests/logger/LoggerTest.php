@@ -49,6 +49,14 @@ class LoggerTest extends TestCase
   {
     \coroutine_clear(false);
 
+    if (\file_exists(__DIR__ . \DS . $this->dest)) {
+      unlink(__DIR__ . \DS . $this->dest);
+    }
+
+    if (\file_exists(__DIR__ . \DS . $this->testFile)) {
+      unlink(__DIR__ . \DS . $this->testFile);
+    }
+
     $this->logger = new Logger("php-app");
 
     $this->logger->arrayWriter(Logger::ALL, 1, function ($level, $message) {
@@ -62,7 +70,7 @@ class LoggerTest extends TestCase
       unlink(__DIR__ . \DS . $this->dest);
     }
 
-    if (file_exists(__DIR__ . \DS . $this->testFile)) {
+    if (\file_exists(__DIR__ . \DS . $this->testFile)) {
       unlink(__DIR__ . \DS . $this->testFile);
     }
 

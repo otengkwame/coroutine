@@ -21,6 +21,7 @@ use Async\Misc\AsyncIterator;
 use Async\Misc\Contextify;
 use Async\Misc\ContextInterface;
 use Async\Misc\InjectionInterface;
+use Async\Misc\Semaphore;
 use Async\Misc\TimeoutAfter;
 use Psr\Container\ContainerInterface;
 
@@ -278,6 +279,7 @@ final class Kernel
             $coroutine->schedule($cancelTask);
 
           if ($task->taskId() === $cancelTask->taskId()) {
+            $task->taskType('cancellation');
             $task->setException($error);
           } else {
             $task->sendValue(true);
@@ -1086,21 +1088,18 @@ final class Kernel
           $taskId = $coroutine->createTask(\awaitAble($callable, ...$args));
         }
 
-        $startTask = $coroutine->getTask($taskId);
+        $callableTask = $coroutine->getTask($taskId);
         $coroutine->addTimeout(function () use ($timeout, $task, $coroutine, $taskId) {
           $task->setTimer();
-          $startTask = $coroutine->getTask($taskId);
+          $callableTask = $coroutine->getTask($taskId);
           if (!$coroutine->isCompleted($taskId)) {
+            $coroutine->schedule($callableTask);
+            $coroutine->createTask(\delayer(2, [$coroutine, 'cancelTask'], $taskId));
+            $task->setException(new TaskTimeout($timeout));
             if ($task->hasCaller()) {
               $caller = $task->getCaller();
               $task->setCaller();
-              $coroutine->schedule($startTask);
-              $coroutine->createTask(\delayer(0, [$coroutine, 'cancelTask'], $taskId));
-              $task->setException(new TaskTimeout($timeout));
               $coroutine->schedule($caller);
-            } else {
-              $task->setException(new TaskTimeout($timeout));
-              $coroutine->schedule($startTask);
             }
           } else {
             $completed = $coroutine->getCompleted($taskId);
@@ -1112,7 +1111,7 @@ final class Kernel
           $coroutine->schedule($task);
         }, $timeout, $task->taskId());
 
-        $coroutine->schedule($startTask);
+        $coroutine->schedule($callableTask);
       }
     );
   }
@@ -1130,7 +1129,7 @@ final class Kernel
    * @throws Panic if no context instance, or `__enter()` method does not return `true`.
    * @todo create `async_for()` to obtain tasks in the order that they complete, as they complete.
    */
-  public static function asyncWith($context = null, $object = null, array $options = []): ContextInterface
+  public static function asyncWith($context = null, $object = null, array $options = [])
   {
     $di = $options;
     if (\is_object($object) && !$object instanceof ContextInterface) {
@@ -1161,7 +1160,6 @@ final class Kernel
         $di = $inject->get((string) $identifier);
       }
     }
-    // @codeCoverageIgnoreEnd
 
     if (\is_resource($context)) {
       $context = new Contextify($context, $di);
@@ -1170,14 +1168,23 @@ final class Kernel
     if ($object instanceof ContextInterface) {
       \__with($object);
     }
+    // @codeCoverageIgnoreEnd
+
 
     if ($context instanceof ContextInterface) {
-      $context();
-      if ($context->entered())
-        return $context;
-    }
+      if ($context instanceof Semaphore) {
+        yield $context->acquire();
+      }
 
-    \panic('No valid context manager found!');
+      try {
+        $context();
+      } finally {
+        if ($context->entered())
+          return $context;
+
+        \panic('No valid context manager found!');
+      }
+    }
   }
 
   /**
@@ -1188,47 +1195,17 @@ final class Kernel
    * @see https://book.pythontips.com/en/latest/context_managers.html
    *
    * @param ContextInterface|resource $context
-   * @param ContainerInterface|object|null $object
-   * @param array[] $options
+   * @param \Closure $as - Will receive a **ContextInterface** instance, when finish will execute `__exit()`, the `__with()` function.
    * @return ContextInterface
    * @throws Panic if no context instance, or `__enter()` method does not return `true`.
    */
-  public static function with($context = null, $object = null, array $options = [], \Closure $as = null)
+  public static function with($context = null, \Closure $as = null)
   {
-    $di = $options;
-    if (\is_object($object) && !$object instanceof ContextInterface) {
-      $inject = $di = $object;
-    }
-
-    // @codeCoverageIgnoreStart
-    if (
-      (!empty($options) && isset($inject))
-      && ($inject instanceof ContainerInterface)
-    ) {
-      if ($inject instanceof InjectionInterface) {
-        $last = \array_pop($options);
-        if (\is_array($options)) {
-          foreach ($options as $className => $friendlyName)
-            $inject->set($className, $friendlyName);
-        }
-
-        if (\is_array($last)) {
-          foreach ($last as $identifier => $parameters) {
-            $di = $inject->get($identifier, $parameters);
-            if (\is_object($di))
-              break;
-          }
-        }
-      } else {
-        $identifier = \array_unshift($options);
-        $di = $inject->get((string) $identifier);
-      }
-    }
-    // @codeCoverageIgnoreEnd
-
     $task = \coroutine()->getTask(yield \current_task());
+    // @codeCoverageIgnoreStart
     if (\is_resource($context)) {
-      $context = new Contextify($context, $di);
+      $context = new Contextify($context);
+      // @codeCoverageIgnoreEnd
     } elseif ($task->hasWith()) {
       $contextTask = $task->getWith();
       $task->setWith($context);
@@ -1236,13 +1213,30 @@ final class Kernel
     }
 
     if ($context instanceof ContextInterface) {
-      if ($context() instanceof \Generator)
-        yield $context();
+      yield $context();
 
       if (!$context->entered())
         \panic('No valid context manager found!');
 
-      return $context;
+      if ($context instanceof Semaphore)
+        yield $context->acquire();
+
+      try {
+        if ($as) {
+          yield $as($context);
+          try {
+            yield $context();
+
+            if ($context instanceof Semaphore)
+              yield $context->release();
+          } finally {
+            if (!$context->exited())
+              $context->__exit(new Panic('Context block failed to exit!'));
+          }
+        }
+      } finally {
+        return $context;
+      }
     }
   }
 
@@ -1324,12 +1318,9 @@ final class Kernel
             $instance->task_done($task, true, $error);
         }
 
-        if ($task->taskId() === Co::getUnique('parent')) {
-          $delayThrow = function () use ($error) {
-            throw $error;
-          };
-
-          $coroutine->createTask(\delayer(1, $delayThrow));
+        if ($task->isSelfCancellation()) {
+          $task->setException($error);
+          return yield yield $coroutine->schedule($task);
         } else {
           $task->setException($error);
         }
