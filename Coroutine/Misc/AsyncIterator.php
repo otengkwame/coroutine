@@ -24,6 +24,7 @@ abstract class AsyncIterator implements \Iterator
    *
    * @return mixed Can return any type.
    */
+  #[\ReturnTypeWillChange]
   abstract public function current();
 
   /**
@@ -39,7 +40,7 @@ abstract class AsyncIterator implements \Iterator
    *
    * @return string|int|null TKey on success, or null on failure.
    */
-  public function key()
+  public function key(): ?int
   {
     static $index = [];
 
