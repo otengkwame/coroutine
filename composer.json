@@ -75,6 +75,9 @@
             "Async\\Tests\\": [
                 "tests/"
             ],
+            "Async\\Tests\\Misc\\": [
+                "tests/misc"
+            ],
             "Async\\examples\\": [
                 "examples/"
             ]

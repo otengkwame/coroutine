@@ -1,15 +1,15 @@
 <?php
 
-namespace Async\Tests;
+namespace Async\Tests\Misc;
 
 use Async\Misc\Injection;
 use Async\ContainerException;
 use Async\NotFoundException;
 use Psr\Container\ContainerInterface;
 
-use Async\Tests\Baz;
-use Async\Tests\Bar;
-use Async\Tests\Foo;
+use Async\Tests\Misc\Baz;
+use Async\Tests\Misc\Bar;
+use Async\Tests\Misc\Foo;
 use PHPUnit\Framework\TestCase;
 
 class InjectionTest extends TestCase
@@ -34,8 +34,8 @@ class InjectionTest extends TestCase
     {
         $container = new Injection();
         $container->set('Baz', 'Baz');
-        $container->set('Async\Tests\Misc\DiInterface', 'Async\Tests\Foo');
-        $baz = $container->autoWire('Async\Tests\Baz');
+        $container->set('Async\Tests\Misc\DiInterface', 'Async\Tests\Misc\Foo');
+        $baz = $container->autoWire('Async\Tests\Misc\Baz');
         $this->assertTrue($baz instanceof Baz);
         $this->assertTrue($baz->foo instanceof Foo);
     }
@@ -52,15 +52,15 @@ class InjectionTest extends TestCase
         $container = new Injection();
         $this->expectException(ContainerException::class);
         $this->expectExceptionMessageMatches('/[is not instantiable]/');
-        $baz = $container->autoWire('Async\Tests\Baz');
+        $baz = $container->autoWire('Async\Tests\Misc\Baz');
     }
 
     public function testGet()
     {
         $container = new Injection();
-        $container->set('Async\Tests\Baz', 'Async\Tests\Baz');
-        $container->set('Async\Tests\Misc\DiInterface', 'Async\Tests\Bar');
-        $baz = $container->get('Async\Tests\Baz');
+        $container->set('Async\Tests\Misc\Baz', 'Async\Tests\Misc\Baz');
+        $container->set('Async\Tests\Misc\DiInterface', 'Async\Tests\Misc\Bar');
+        $baz = $container->get('Async\Tests\Misc\Baz');
         $this->assertTrue($baz instanceof Baz);
         $this->assertTrue($baz->foo instanceof Bar);
     }
