@@ -234,7 +234,7 @@ class TaskGroupTest extends TestCase
       $t3 = yield $g->spawn(child, 3, 'bad');
       yield __with($g);
 
-      if (\IS_PHP81)
+      if (\IS_PHP8)
         $this->assertInstanceOf(\TypeError::class, exception_for($t3));
       else
         $this->assertInstanceOf(\Exception::class, exception_for($t3));

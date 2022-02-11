@@ -149,34 +149,8 @@ class LoggerTest extends TestCase
     yield $log->close();
 
     $content = file_get_contents(__DIR__ . \DS . $this->testFile);
-    /**
-     * @see http://txt2re.com/
-     */
-    $re1 = '(\\[.*?\\])';    # Square Braces 1
-    $re2 = '(\\s+)';    # White Space 1
-    $re3 = '(\\(.*\\))';    # Round Braces 1
-    $re4 = '(.)';    # Any Single Character 1
-    $re5 = '(\\s+)';    # White Space 2
-    $re6 = '((?:[a-z][a-z]+))';    # Word 1
-    $re7 = '(\\s+)';    # White Space 3
-    $re8 = '(.)';    # Any Single Character 2
-    $re9 = '((?:[a-z][a-z]+))';    # Word 2
-    $re10 = '(\\s+)';    # White Space 4
-    $re11 = '((?:[a-z][a-z]+))';    # Word 3
-    $re12 = '(\\s+)';    # White Space 5
-    $re13 = '((?:[a-z][a-z]+))';    # Word 4
-    $re14 = '(\\s+)';    # White Space 6
-    $re15 = '((?:[a-z][a-z]+))';    # Word 5
-    $re16 = '(\\s+)';    # White Space 7
-    $re17 = '((?:[a-z][a-z]+))';    # Word 6
-    $re18 = '(\\s+)';    # White Space 8
-    $re19 = '.*?';    # Non-greedy match on filler
-    $re20 = '((?:[a-z][a-z]*[0-9]+[a-z0-9]*))';    # Alphanumeric 1
 
-    $this->assertRegExp(
-      "/" . $re1 . $re2 . $re3 . $re4 . $re5 . $re6 . $re7 . $re8 . $re9 . $re10 . $re11 . $re12 . $re13 . $re14 . $re15 . $re16 . $re17 . $re18 . $re19 . $re20 . "/is",
-      $content
-    );
+    $this->assertStringContainsString("] (log-app): EMERGENCY  'This is an emergency with ", $content);
   }
 
   public function testLogEmergencyUniqid()

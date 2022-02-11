@@ -118,7 +118,7 @@ interface AsyncLoggerInterface extends LoggerInterface
    */
   public function mailWriter(
     $to,
-    $subject = '',
+    $subject = null,
     array $headers = [],
     $levels = self::ALL,
     $interval = 1,

@@ -161,7 +161,7 @@ class EventTest extends TestCase
             'sleep_done',
         ]
 */
-    if (\IS_PHP81)
+    if (\IS_PHP8)
       $this->assertEquals([
         'sleep',
         'event_wait',

@@ -49,7 +49,7 @@ class SemaphoreTest extends TestCase
 
     \coroutine_run(main);
 
-    if (\IS_PHP81)
+    if (\IS_PHP8)
       $this->assertEquals([
         'work1 wait',
         False,
@@ -124,7 +124,7 @@ assert results == [
 
     \coroutine_run(main);
 
-    if (\IS_PHP81)
+    if (\IS_PHP8)
       $this->assertEquals([
         'work1 wait',            # Both work1 and work2 admitted
         False,
@@ -278,7 +278,7 @@ assert results == [
 
     \coroutine_run(worker_timeout, 1);
 
-    if (\IS_PHP81)
+    if (\IS_PHP8)
       $this->assertEquals([
         'sleep',
         'lock_wait',

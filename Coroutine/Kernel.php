@@ -1028,7 +1028,8 @@ final class Kernel
           $task->setTimer();
           if (!empty($timeout)) {
             $cancelTask = $coroutine->getTask($taskId);
-            $cancelTask->setException(new CancelledError("Task {$taskId}!"));
+            if ($cancelTask instanceof TaskInterface)
+              $cancelTask->setException(new CancelledError("Task {$taskId}!"));
             $task->setException(new TimeoutError($timeout));
           } elseif ($coroutine->isCompleted($taskId)) {
             $tasks = $coroutine->getCompleted($taskId);

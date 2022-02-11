@@ -330,7 +330,7 @@ final class Logger extends AsyncLogger implements AsyncLoggerInterface
 
   public function mailWriter(
     $to,
-    $subject = '',
+    $subject = null,
     array $headers = [],
     $levels = self::ALL,
     $interval = 1,
