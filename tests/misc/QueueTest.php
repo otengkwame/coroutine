@@ -175,36 +175,20 @@ class QueueTest extends TestCase
 
     coroutine_run('producer');
 
-    if (\IS_PHP8)
-      $this->assertEquals([
-        'producer_start',
-        ['produced', 0],
-        ['produced', 1],
-        ['cons1', 0],
-        ['produced', 2],
-        ['cons1', 1],
-        ['produced', 3],
-        ['cons1', 2],
-        'producer_join',
-        ['cons1', 3],
-        'producer_done',
-        'cons1 done',
-      ], $this->results);
-    else
-      $this->assertEquals([
-        'producer_start',
-        ['produced', 0],
-        ['produced', 1],
-        ['cons1', 0],
-        ['produced', 2],
-        ['cons1', 1],
-        ['produced', 3],
-        ['cons1', 2],
-        'producer_join',
-        ['cons1', 3],
-        'cons1 done',
-        'producer_done',
-      ], $this->results);
+    $this->assertEquals([
+      'producer_start',
+      ['produced', 0],
+      ['produced', 1],
+      ['cons1', 0],
+      ['produced', 2],
+      ['cons1', 1],
+      ['produced', 3],
+      ['cons1', 2],
+      'producer_join',
+      ['cons1', 3],
+      'cons1 done',
+      'producer_done',
+    ], $this->results);
   }
 
   public function test_queue_get_cancel()

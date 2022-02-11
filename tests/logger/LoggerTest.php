@@ -404,7 +404,7 @@ class LoggerTest extends TestCase
   {
     $logger = $this->getLogger();
     $this->expectException(InvalidArgumentException::class);
-    yield $logger->mailWriter('foo@bar.com', '', ['Cc: some@somewhere.com']);
+    yield $logger->mailWriter(1, 1, ['Cc: some@somewhere.com']);
     yield \gather($logger->info('Log me!'));
     yield \gather($logger->error('Log me too!'));
     yield $logger->close();
