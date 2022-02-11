@@ -183,7 +183,7 @@ class EventTest extends TestCase
     async('event_waiter', function (Event $evt) {
       $this->results[] = 'event_wait';
       try {
-        yield timeout_after(1.0, $evt->wait());
+        yield timeout_after(0.5, $evt->wait());
         $this->results[] = 'got event';
       } catch (TaskTimeout $e) {
         $this->results[] = 'event_timeout';
