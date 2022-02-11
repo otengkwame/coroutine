@@ -113,11 +113,17 @@ interface ContextInterface
    * This method forms the heart of a context manager execution flow. Called by `async_with()`, `with()`, and `__with()` functions.
    *
    * This method then executes either `__enter()` or `__exit()` depending on state, only once.
-   * - When **overwriting** this method, insure the replacement action executes the methods to at least set the proper state.
+   * - When **overwriting** this method, insure the replacement action executes the methods to at least set the proper state as in changeable section below:
    *
    *```php
    * public function __invoke()
    *  {
+   * // Do not change!
+   * if (!$this->withSet) {
+   *   yield $this->withSet();
+   * }
+   *
+   * // Is changeable...
    *    if (!$this->enter) {
    *      return $this->__enter();
    *    } elseif (!$this->exit) {

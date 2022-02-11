@@ -10,7 +10,6 @@ namespace Async\Tests;
 use Async\Misc\Semaphore;
 use Async\CancelledError;
 use Async\TaskTimeout;
-use Async\TimeoutError;
 use PHPUnit\Framework\TestCase;
 
 class SemaphoreTest extends TestCase
@@ -49,53 +48,20 @@ class SemaphoreTest extends TestCase
 
     \coroutine_run(main);
 
-    if (\IS_PHP8)
-      $this->assertEquals([
-        'work1 wait',
-        False,
-        'work1 acquire',
-        'work2 wait',
-        True,
-        'work3 wait',
-        True,
-        'work1 release',
-        'work2 acquire',
-        'work2 release',
-        'work3 acquire',
-        'work3 release',
-      ], $this->results);
-    else
-      $this->assertEquals([
-        'work1 wait',
-        False,
-        'work1 acquire',
-        'work2 wait',
-        True,
-        'work1 release',
-        'work2 acquire',
-        'work3 wait',
-        True,
-        'work2 release',
-        'work3 acquire',
-        'work3 release',
-      ], $this->results);
-
-    /* Originally
-assert results == [
-            'work1 wait',
-            False,
-            'work1 acquire',
-            'work2 wait',
-            True,
-            'work3 wait',
-            True,
-            'work1 release',
-            'work2 acquire',
-            'work2 release',
-            'work3 acquire',
-            'work3 release',
-        ]
-*/
+    $this->assertEquals([
+      'work1 wait',
+      False,
+      'work1 acquire',
+      'work2 wait',
+      True,
+      'work3 wait',
+      True,
+      'work1 release',
+      'work2 acquire',
+      'work2 release',
+      'work3 acquire',
+      'work3 release',
+    ], $this->results);
   }
 
 
@@ -124,53 +90,20 @@ assert results == [
 
     \coroutine_run(main);
 
-    if (\IS_PHP8)
-      $this->assertEquals([
-        'work1 wait',            # Both work1 and work2 admitted
-        False,
-        'work1 acquire',
-        'work2 wait',
-        False,
-        'work2 acquire',
-        'work3 wait',
-        true,
-        'work1 release',
-        'work3 acquire',
-        'work2 release',
-        'work3 release',
-      ], $this->results);
-    else
-      $this->assertEquals([
-        'work1 wait',            # Both work1 and work2 admitted
-        False,
-        'work1 acquire',
-        'work2 wait',
-        False,
-        'work2 acquire',
-        'work1 release',
-        'work3 wait',
-        False,
-        'work3 acquire',
-        'work2 release',
-        'work3 release',
-      ], $this->results);
-
-    /* Originally
-assert results == [
-            'work1 wait',            # Both work1 and work2 admitted
-            False,
-            'work1 acquire',
-            'work2 wait',
-            False,
-            'work2 acquire',
-            'work3 wait',
-            True,
-            'work1 release',
-            'work3 acquire',
-            'work2 release',
-            'work3 release',
-        ]
-*/
+    $this->assertEquals([
+      'work1 wait',            # Both work1 and work2 admitted
+      False,
+      'work1 acquire',
+      'work2 wait',
+      False,
+      'work2 acquire',
+      'work3 wait',
+      true,
+      'work1 release',
+      'work3 acquire',
+      'work2 release',
+      'work3 release',
+    ], $this->results);
   }
 
   public function test_sema_acquire_cancel()

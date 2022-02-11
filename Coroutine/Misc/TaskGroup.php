@@ -6,7 +6,6 @@ namespace Async\Misc;
 
 use Async\TaskInterface;
 use Async\RuntimeError;
-use Async\CoroutineInterface;
 use Async\Misc\ContextAsyncIterator;
 
 /**
@@ -222,10 +221,6 @@ final class TaskGroup extends ContextAsyncIterator
   {
     if ($this->joined)
       \panic(new RuntimeError('TaskGroup already joined'));
-
-    if (!$this->isWith()) {
-      yield $this->withSet();
-    }
 
     $tid = yield \spawner($awaitableFunction, ...$args);
     $this->add_task($tid);
@@ -496,13 +491,16 @@ final class TaskGroup extends ContextAsyncIterator
 
   public function __invoke()
   {
+    if (!$this->withSet) {
+      yield $this->withSet();
+    }
+
     if (!$this->enter) {
       return $this->__enter();
     } elseif (!$this->exit) {
       try {
-        return $this->join();
+        return yield $this->join();
       } finally {
-        $this->clearWith();
         if (!$this->exit)
           $this->__exit();
       }

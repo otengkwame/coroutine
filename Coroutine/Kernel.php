@@ -1167,7 +1167,7 @@ final class Kernel
     }
 
     if ($object instanceof ContextInterface) {
-      \__with($object);
+      yield \__with($object);
     }
     // @codeCoverageIgnoreEnd
 
@@ -1178,7 +1178,7 @@ final class Kernel
       }
 
       try {
-        $context();
+        yield $context();
       } finally {
         if ($context->entered())
           return $context;
