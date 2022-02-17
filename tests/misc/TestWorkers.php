@@ -98,6 +98,9 @@ class TestWorkers extends TestCase
 
   public function test_worker_cancel()
   {
+    if ((float) \phpversion() >= 8.0)
+      $this->markTestSkipped('The `run_in_process()` function needs refactoring to work without `ext-uv`.');
+
     $this->results = [];
 
     async('spin', function ($n) {
@@ -141,6 +144,9 @@ class TestWorkers extends TestCase
 
   public function test_worker_timeout()
   {
+    if ((float) \phpversion() >= 8.0)
+      $this->markTestSkipped('The `run_in_process()` function needs refactoring to work without `ext-uv`.');
+
     $this->results = [];
 
     async('spin', function ($n) {
