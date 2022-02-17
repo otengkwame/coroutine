@@ -150,7 +150,7 @@ if (!\function_exists('awaitable_future')) {
    * @see https://docs.python.org/3.7/library/asyncio-subprocess.html#subprocesses
    * @see https://docs.python.org/3.7/library/asyncio-dev.html#running-blocking-code
    *
-   * @param callable|shell $command
+   * @param callable|shell $callable
    * @param int|float|null $timeout The timeout in seconds or null to disable
    * @param bool $display set to show `future` output
    * @param Channeled|resource|mixed|null $channel IPC/CSP communication to be passed to the underlying `Future` instance.

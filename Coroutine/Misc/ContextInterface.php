@@ -13,7 +13,7 @@ use Async\TaskInterface;
  * (such as files, generators, database connections, synchronization locks).
  *
  * - Context managers provide `__enter()` and `__exit()` methods that are `__invoke()` on _entry_ **to** and _exit_ **from**
- * the body **between** `with()`, or `async_with()`, **and** `__with()` function statement.
+ * the body **between** `with()`, or `async_with()`, **and** `ending()` function statement.
  */
 interface ContextInterface
 {
@@ -110,7 +110,7 @@ interface ContextInterface
   public function __destruct();
 
   /**
-   * This method forms the heart of a context manager execution flow. Called by `async_with()`, `with()`, and `__with()` functions.
+   * This method forms the heart of a context manager execution flow. Called by `async_with()`, `with()`, and `ending()` functions.
    *
    * This method then executes either `__enter()` or `__exit()` depending on state, only once.
    * - When **overwriting** this method, insure the replacement action executes the methods to at least set the proper state as in changeable section below:

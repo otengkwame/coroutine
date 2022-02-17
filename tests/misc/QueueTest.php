@@ -123,7 +123,7 @@ class QueueTest extends TestCase
       yield join_task($c1);
     });
 
-    coroutine_run('producer');
+    coroutine_run(producer);
 
     $this->assertEquals([
       'producer_start',
@@ -141,39 +141,39 @@ class QueueTest extends TestCase
   {
     $this->results = [];
 
-    async('consumer', function ($queue, $label) {
+    async('consumer', function ($q, $label) {
       while (True) {
-        $item = yield queue_get($queue);
+        $item = yield queue_get($q);
         if ($item === 'None')
           break;
         $this->results[] = [$label, $item];
-        yield queue_done($queue);
+        yield queue_done($q);
         yield sleep_for(0.1);
       }
 
-      yield queue_done($queue);
+      yield queue_done($q);
       $this->results[] = $label . ' done';
     });
 
     async('producer', function () {
-      create_queue('queue', 2);
+      create_queue('q', 2);
       $this->results[] = 'producer_start';
-      yield create_task('consumer', 'queue', 'cons1');
+      yield create_task(consumer, 'q', 'cons1');
       yield sleep_for(0.1);
 
       foreach (range(0, 3) as $n) {
-        yield queue_put('queue', $n);
+        yield queue_put('q', $n);
         $this->results[] = ['produced', $n];
       }
 
-      yield queue_put('queue', 'None');
+      yield queue_put('q', 'None');
       $this->results[] = 'producer_join';
 
-      yield queue_join('queue');
+      yield queue_join('q');
       $this->results[] = 'producer_done';
     });
 
-    coroutine_run('producer');
+    coroutine_run(producer);
 
     $this->assertEquals([
       'producer_start',
@@ -197,11 +197,11 @@ class QueueTest extends TestCase
     $this->results = [];
 
     async('consumer', function () {
-      create_queue('queue');
+      create_queue('q');
 
       try {
         $this->results[] = 'consumer waiting';
-        $item = yield queue_get('queue');
+        $item = yield queue_get('q');
         $this->results[] = 'not here';
       } catch (CancelledError $e) {
         $this->results[] = 'consumer cancelled';
@@ -209,12 +209,12 @@ class QueueTest extends TestCase
     });
 
     async('driver', function () {
-      $task = yield create_task('consumer');
+      $task = yield create_task(consumer);
       yield sleep_for(0.5);
       yield cancel_task($task);
     });
 
-    coroutine_run('driver');
+    coroutine_run(driver);
 
     $this->assertEquals([
       'consumer waiting',
@@ -228,12 +228,12 @@ class QueueTest extends TestCase
     $this->results = [];
 
     async('producer', function () {
-      create_queue('queue', 1);
+      create_queue('q', 1);
       $this->results[] = 'producer_start';
-      yield queue_put('queue', 0);
+      yield queue_put('q', 0);
 
       try {
-        yield queue_put('queue', 1);
+        yield queue_put('q', 1);
         $this->results[] = 'not here';
       } catch (CancelledError $e) {
         $this->results[] = 'producer_cancel';
@@ -241,12 +241,12 @@ class QueueTest extends TestCase
     });
 
     async('driver', function () {
-      $task = yield create_task('producer');
+      $task = yield create_task(producer);
       yield sleep_for(0.5);
       yield cancel_task($task);
     });
 
-    coroutine_run('driver');
+    coroutine_run(driver);
 
     $this->assertEquals([
       'producer_start',
@@ -268,7 +268,7 @@ class QueueTest extends TestCase
       $this->assertNull(Co::getQueue('q'));
     });
 
-    coroutine_run('main');
+    coroutine_run(main);
   }
 
   public function test_queue_get_timeout()
@@ -277,11 +277,11 @@ class QueueTest extends TestCase
     $this->results = [];
 
     async('consumer', function () {
-      create_queue('queue');
+      create_queue('q');
 
       try {
         $this->results[] = 'consumer waiting';
-        $item = yield timeout_after(0.5, queue_get('queue'));
+        $item = yield timeout_after(0.5, queue_get('q'));
         $this->results[] = 'not here';
       } catch (TaskTimeout $e) {
         $this->results[] = 'consumer timeout';
@@ -289,7 +289,7 @@ class QueueTest extends TestCase
       }
     });
 
-    coroutine_run('consumer');
+    coroutine_run(consumer);
 
     $this->assertEquals([
       'consumer waiting',
@@ -303,12 +303,12 @@ class QueueTest extends TestCase
     $this->results = [];
 
     async('producer', function () {
-      create_queue('queue', 1);
+      create_queue('q', 1);
       $this->results[] = 'producer start';
-      yield queue_put('queue', 0);
+      yield queue_put('q', 0);
 
       try {
-        yield timeout_after(0.5, queue_put('queue', 1));
+        yield timeout_after(0.5, queue_put('q', 1));
         $this->results[] = 'not here';
       } catch (TaskTimeout $e) {
         $this->results[] = 'producer timeout';
@@ -316,7 +316,7 @@ class QueueTest extends TestCase
       }
     });
 
-    coroutine_run('producer');
+    coroutine_run(producer);
 
     $this->assertEquals([
       'producer start',

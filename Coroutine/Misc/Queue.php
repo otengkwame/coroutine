@@ -115,17 +115,16 @@ final class Queue
    */
   public function put($item)
   {
-    while ($this->full()) {
-      try {
+    try {
+      while ($this->full())
         yield;
-      } catch (\Throwable $e) {
-        try {
-          yield \kill_task();
-        } catch (\Throwable $other) {
-        }
-
-        throw $e;
+    } catch (\Throwable $e) {
+      try {
+        yield \kill_task();
+      } catch (\Throwable $other) {
       }
+
+      throw $e;
     }
 
     return $this->put_nowait($item);
@@ -159,17 +158,16 @@ final class Queue
    */
   public function get()
   {
-    while ($this->empty()) {
-      try {
+    try {
+      while ($this->empty())
         yield;
-      } catch (\Throwable $e) {
-        try {
-          yield \kill_task();
-        } catch (\Throwable $other) {
-        }
-
-        throw $e;
+    } catch (\Throwable $e) {
+      try {
+        yield \kill_task();
+      } catch (\Throwable $other) {
       }
+
+      throw $e;
     }
 
     return $this->get_nowait();

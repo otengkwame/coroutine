@@ -69,6 +69,8 @@ final class Event
    */
   public function wait()
   {
+    yield;
+
     if ($this->is_set())
       return true;
 

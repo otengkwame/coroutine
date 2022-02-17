@@ -19,6 +19,8 @@ use Async\Misc\ContextInterface;
 use Async\Misc\Semaphore;
 use Psr\Container\ContainerInterface;
 
+use function Async\Worker\awaitable_future;
+
 if (!\function_exists('coroutine_run')) {
 
   if (!\defined('None'))
@@ -67,8 +69,8 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * Makes an resolvable function from `label` name that's callable with `coroutine_run`, `go`,
-   * `await`/`away`, `spawner` and inturn calls **create_task**.
+   * Makes an resolvable function from `label` name that's callable with `coroutine_run()`, `go()`,
+   * `await()`, `away()`, `spawner()` and inturn calls **create_task()**.
    * The passed in `function` is wrapped to be `awaitAble`. The `label` will be `Define()` and make that _name_ a **global** `constant`.
    *
    * - This will store a closure in `Co` static class with supplied `label` name as key.
@@ -97,6 +99,7 @@ if (!\function_exists('coroutine_run')) {
    * @param \Closure $as Will **receive** _chunk_ of a _task_ `result` for processing.
    * @return void
    * @see https://docs.python.org/3/reference/compound_stmts.html#the-async-for-statement
+   * @see https://docs.python.org/3.10/reference/expressions.html#asynchronous-generator-functions
    */
   function async_for(AsyncIterator $task, \Closure $as)
   {
@@ -121,7 +124,6 @@ if (!\function_exists('coroutine_run')) {
    * @param array[] $options
    * @return ContextInterface
    * @throws Panic if no context instance, or `__enter()` method does not return `true`.
-   * @todo create `async_for()` to obtain tasks in the order that they complete, as they complete.
    */
   function async_with($context = null, $other = null, array $options = [])
   {
@@ -141,7 +143,7 @@ if (!\function_exists('coroutine_run')) {
    * @see https://book.pythontips.com/en/latest/context_managers.html
    *
    * @param ContextInterface|resource $context
-   * @param \Closure $as - Will receive a **ContextInterface** instance, when finish will execute `__exit()`, the `__with()` function.
+   * @param \Closure $as - Will receive a **ContextInterface** instance, when finish will execute `__exit()`, the `ending()` function.
    * @return ContextInterface
    * @throws Panic if no context instance, or `__enter()` method does not return `true`.
    */
@@ -164,7 +166,7 @@ if (!\function_exists('coroutine_run')) {
    * @throws Exception if any `Context` _managed_ code **error's**.
    * @throws Panic if `__exit()` method does not return `true`.
    */
-  function __with(ContextInterface $context)
+  function ending(ContextInterface $context)
   {
     try {
       if ($context() instanceof \Generator)
@@ -182,7 +184,7 @@ if (!\function_exists('coroutine_run')) {
   /**
    * Ends an `async_with` or `with` **Context** block, and executes `__exit()` method and any closing _routine_.
    */
-  \define('__with', '__with');
+  \define('ending', 'ending');
 
   /**
    * A `TaskGroup` represents a collection of managed `tasks`. A group can be used to ensure that all tasks terminate together.
@@ -303,6 +305,71 @@ if (!\function_exists('coroutine_run')) {
 
     return $task instanceof TaskInterface  && $task->exception() instanceof CancelledError;
   }
+
+  /**
+   * Check _task_, returns `true` if terminated, not `running`.
+   *
+   * @param integer $tid task id instance
+   * @return bool
+   */
+  function is_terminated(int $tid): bool
+  {
+    $coroutine = \coroutine();
+    if ($coroutine->getTask($tid))
+      return $coroutine->getTask($tid)->isFinished();
+    elseif ($coroutine->isCompleted($tid))
+      return $coroutine->getCompleted($tid)->isFinished();
+
+    return false;
+  }
+
+  /**
+   * Check _task_, returns `true` if joined, _execution status_ has changed.
+   *
+   * @param integer $tid task id instance
+   * @return bool
+   */
+  function is_joined(int $tid): bool
+  {
+    $coroutine = \coroutine();
+    if ($coroutine->getTask($tid))
+      return $coroutine->getTask($tid)->isJoined();
+    elseif ($coroutine->isCompleted($tid))
+      return $coroutine->getCompleted($tid)->isJoined();
+
+    return false;
+  }
+
+  /**
+   * Run `callable(*args)` in a separate **process** and returns the result. In the event of _cancellation_,
+   * the worker _process_ and the associated `task` is immediately terminated. This results in a `SIGKILL`
+   * signal being sent to the worker _process_.
+   *
+   * The given `callable` executes in an entirely independent **PHP interpreter** and there is no shared global state.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param callable $callable
+   * @param mixed ...$args
+   * @return mixed
+   * @see https://curio.readthedocs.io/en/latest/reference.html?highlight=TaskError#run_in_process
+   */
+  function run_in_process(callable $callable, ...$args)
+  {
+    $process = function () use ($callable, $args) {
+      return $callable(...$args);
+    };
+
+    return awaitable_future(function () use ($process) {
+      return Kernel::addFuture($process, 0, false, null, null, \SIGKILL, null, 'signaling');
+    });
+  }
+
+  /**
+   * Run `callable(*args)` in a separate **process** and returns the result.
+   * In the event of _cancellation_, the worker _process_ and the associated `task` is immediately terminated.
+   * This results in a `SIGKILL` signal being sent to the worker _process_.
+   */
+  \define('run_in_process', 'run_in_process');
 
   /**
    * This function will `pause` and execute the `label` function, with `arguments`,
@@ -926,7 +993,7 @@ if (!\function_exists('coroutine_run')) {
    * @see https://curio.readthedocs.io/en/latest/reference.html#basic-execution
    * @source https://github.com/python/cpython/blob/3.10/Lib/asyncio/runners.py
    *
-   * @param generator|callable|string $routine **main** `coroutine` or `async` function.
+   * @param generator|callable|string $routine - the **main** `coroutine` or `async` function.
    * @param mixed ...$args if **routine** is `async` function.
    * @throws Panic If **routine** not valid.
    */
@@ -1068,31 +1135,54 @@ if (!\function_exists('coroutine_run')) {
    */
   function panic($message = '', $code = 0, \Throwable $previous = null)
   {
-    // @codeCoverageIgnoreStart
     if ($message instanceof Panicking)
       throw $message;
-    // @codeCoverageIgnoreEnd
 
     throw new Panic($message, $code, $previous);
   }
 
   /**
+   * Re-raises **throws** the `exception` that is currently being _handled_.
+   * This function will also run the `shutdown` process, if it _detect's_ any issue getting current `task` or `coroutine` instance.
    * - This function needs to be prefixed with `yield`
    *
    * @throws Exception|Error
-   *
-   * @codeCoverageIgnoreS
+   * @see https://docs.python.org/3.10/reference/simple_stmts.html#raise
+   * @codeCoverageIgnore
    */
   function raise()
   {
     try {
-      $exception = coroutine()->getTask(yield current_task())->exception();
+      $exception = \coroutine()->getTask(yield \current_task())->exception();
     } catch (\Throwable $th) {
       yield shutdown();
     }
 
     throw $exception;
   }
+
+  /**
+   * Re-raises **throws** the `exception` that is currently being _handled_.
+   * This function will also run the `shutdown` process, if it _detect's_ any issue getting current `task` or `coroutine` instance.
+   */
+  \define('raise', 'raise');
+
+  /**
+   * This is useful as a `placeholder` when a statement is required syntactically.
+   * - When executed, nothing happens.
+   *
+   * @return void
+   * @see https://docs.python.org/3.10/reference/simple_stmts.html#pass
+   */
+  function pass(): void
+  {
+  }
+
+  /**
+   * This is useful as a `placeholder` when a statement is required syntactically.
+   * - When executed, nothing happens.
+   */
+  \define('pass', 'pass');
 
   /**
    * An PHP Functional Programming Primitive.
@@ -1108,21 +1198,7 @@ if (!\function_exists('coroutine_run')) {
    */
   function curry(callable $function, $required = true)
   {
-    if (\method_exists('Closure', 'fromCallable')) {
-      $reflection = new \ReflectionFunction(\Closure::fromCallable($function));
-    } else {
-      // @codeCoverageIgnoreStart
-      if (\is_string($function) && \strpos($function, '::', 1) !== false) {
-        $reflection = new \ReflectionMethod($function, null);
-      } elseif (\is_array($function) && \count($function) === 2) {
-        $reflection = new \ReflectionMethod($function[0], $function[1]);
-      } elseif (\is_object($function) && \method_exists($function, '__invoke')) {
-        $reflection = new \ReflectionMethod($function, '__invoke');
-      } else {
-        $reflection = new \ReflectionFunction($function);
-      }
-      // @codeCoverageIgnoreEnd
-    }
+    $reflection = new \ReflectionFunction(\Closure::fromCallable($function));
     $count = $required ?
       $reflection->getNumberOfRequiredParameters() : $reflection->getNumberOfParameters();
     return \curry_n($count, $function);

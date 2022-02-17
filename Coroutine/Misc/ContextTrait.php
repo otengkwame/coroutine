@@ -7,7 +7,7 @@ namespace Async\Misc;
 use Async\TaskInterface;
 
 /**
- * A **context manager** can control a block of code using the `async_with()` and `__with()` functions.
+ * A **context manager** can control a block of code using the `async_with()` and `ending()` functions.
  * Basically a `try {} catch {} finally {}` construct, with any `resource` or `object` used be automatically **closed**.
  *
  * @see https://realpython.com/python-with-statement/
@@ -216,7 +216,7 @@ trait ContextTrait
   }
 
   /**
-   * This method forms the heart of a context manager execution flow. Called by `async_with()`, `with()`, and `__with()` functions.
+   * This method forms the heart of a context manager execution flow. Called by `async_with()`, `with()`, and `ending()` functions.
    *
    * This method then executes either `__enter()` or `__exit()` depending on state, only once.
    * - When **overwriting** this method, insure the replacement action executes the methods to at least set the proper state as in changeable section below:

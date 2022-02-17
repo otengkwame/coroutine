@@ -7,7 +7,7 @@ namespace Async\Misc;
 use Async\Misc\ContextInterface;
 
 /**
- * A **context manager** can control a block of code using the `async_with()` and `__with()` functions.
+ * A **context manager** can control a block of code using the `async_with()` and `ending()` functions.
  * Basically a `try {} catch {} finally {}` construct, with any `resource` or `object` used be automatically **closed**.
  *
  * @see https://realpython.com/python-with-statement/

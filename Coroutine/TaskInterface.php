@@ -195,6 +195,8 @@ interface TaskInterface
    */
   public function isFinished(): bool;
 
+  public function isJoined(): bool;
+
   /**
    * Check `Task` has another _task_ to **schedule** on _completion/termination_.
    *

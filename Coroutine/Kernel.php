@@ -272,6 +272,15 @@ final class Kernel
           }
 
           $error = ($isContext || $type) ? new TaskCancelled("Task {$tid}!") :  new CancelledError("Task {$tid}!");
+          $customData = $cancelTask->getCustomData();
+          if ($customData instanceof FutureInterface) {
+            $customData->stop();
+            $cancelTask->setCaller($task);
+            $cancelTask->setException($error);
+            $task->sendValue(true);
+            return $coroutine->schedule($task);
+          }
+
           $cancelTask->setException($error);
           if ($cancelTask instanceof FiberInterface)
             $coroutine->scheduleFiber($cancelTask);
@@ -285,6 +294,9 @@ final class Kernel
             $task->sendValue(true);
           }
 
+          $coroutine->schedule($task);
+        } elseif ($coroutine->isCompleted($tid)) {
+          $task->sendValue(true);
           $coroutine->schedule($task);
         } else {
           throw new InvalidArgumentException($errorMessage . ' ' . $tid);
@@ -309,6 +321,11 @@ final class Kernel
           $join->setCaller($task);
           if ($join->hasGroup())
             $join->discardGroup();
+
+          if ($join->exception()) {
+            $task->setException($join->exception());
+            return $coroutine->schedule($task);
+          }
 
           $coroutine->schedule($join);
           return $join->join();
@@ -408,7 +425,7 @@ final class Kernel
     bool $display = false,
     $channel = null,
     $channelTask = null,
-    int $signal = 0,
+    int $signal = \SIGKILL,
     $signalTask = null,
     $taskType = null
   ) {
@@ -424,7 +441,6 @@ final class Kernel
             $task->setState('completed');
             $task->sendValue($result);
             $coroutine->schedule($task);
-            $coroutine->cancelProgress($task);
           })
           ->catch(function (\Throwable $error) use ($task, $coroutine) {
             $coroutine->cancelProgress($task);
@@ -441,6 +457,9 @@ final class Kernel
 
         $task->customData($future);
 
+        if ($signal !== 0 && $signalTask === null)
+          $signalTask = $task->taskId();
+
         if ($signal !== 0 && \is_int($signalTask)) {
           $future->signal($signal, function ($signaled)
           use ($task, $coroutine, $signal, $signalTask) {
@@ -448,13 +467,25 @@ final class Kernel
             $task->setState('signaled');
             $signaler = $coroutine->getTask($signalTask);
             if ($signaler instanceof TaskInterface) {
-              $task->setException(new CancelledError('with signal: ' . $signal));
-              $signaler->sendValue($signaled);
-              $coroutine->schedule($signaler);
+              if ($signaler->hasCaller()) {
+                $cancel = $signaler->getCaller();
+                $cancel->setCaller();
+                if ($cancel->getTimer() || $signaler->getTimer())
+                  $cancel->setException(new TaskTimeout(0.0));
+                else
+                  $cancel->setException(new CancelledError('Task ' . $signalTask . ' signal: ' . $signal));
+
+                return $coroutine->schedule($cancel);
+              } else {
+                $task->setException(new CancelledError('Task ' . $signalTask . ' signal: ' . $signal));
+                $signaler->sendValue($signaled);
+                $coroutine->schedule($signaler);
+              }
             } else { // @codeCoverageIgnoreStart
               $task->setException(new \Exception(\sprintf('An unhandled signal received: %s', $signal)));
               $coroutine->schedule($task);
             } // @codeCoverageIgnoreEnd
+
           });
         }
 
@@ -1083,9 +1114,13 @@ final class Kernel
   {
     return yield yield new Kernel(
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($callable, $timeout, $args) {
+        $skip = false;
         if ($callable instanceof \Generator) {
           $taskId = $coroutine->createTask($callable);
         } elseif (\is_callable($callable)) {
+          if ($callable === \run_in_process)
+            $skip = true;
+
           $taskId = $coroutine->createTask(\awaitAble($callable, ...$args));
         }
 
@@ -1094,8 +1129,21 @@ final class Kernel
           $task->setTimer();
           $callableTask = $coroutine->getTask($taskId);
           if (!$coroutine->isCompleted($taskId)) {
-            $coroutine->schedule($callableTask);
-            $coroutine->createTask(\delayer(2, [$coroutine, 'cancelTask'], $taskId));
+            $future = $callableTask->getCustomData();
+            if ($future instanceof FutureInterface) {
+              $future->stop(\SIGKILL);
+              $callableTask->setCaller($task);
+              $canceled = function () use ($task, $timeout, $coroutine) {
+                $task->setException(new TaskTimeout($timeout));
+                $coroutine->schedule($task);
+              };
+
+              return $coroutine->createTask(\delayer(1, $canceled));
+            } else {
+              $coroutine->schedule($callableTask);
+              $coroutine->createTask(\delayer(2, [$coroutine, 'cancelTask'], $taskId));
+            }
+
             $task->setException(new TaskTimeout($timeout));
             if ($task->hasCaller()) {
               $caller = $task->getCaller();
@@ -1112,7 +1160,8 @@ final class Kernel
           $coroutine->schedule($task);
         }, $timeout, $task->taskId());
 
-        $coroutine->schedule($callableTask);
+        if (!$skip)
+          $coroutine->schedule($callableTask);
       }
     );
   }
@@ -1128,7 +1177,6 @@ final class Kernel
    * @param array[] $options
    * @return ContextInterface
    * @throws Panic if no context instance, or `__enter()` method does not return `true`.
-   * @todo create `async_for()` to obtain tasks in the order that they complete, as they complete.
    */
   public static function asyncWith($context = null, $object = null, array $options = [])
   {
@@ -1167,7 +1215,7 @@ final class Kernel
     }
 
     if ($object instanceof ContextInterface) {
-      yield \__with($object);
+      yield \ending($object);
     }
     // @codeCoverageIgnoreEnd
 
@@ -1196,7 +1244,7 @@ final class Kernel
    * @see https://book.pythontips.com/en/latest/context_managers.html
    *
    * @param ContextInterface|resource $context
-   * @param \Closure $as - Will receive a **ContextInterface** instance, when finish will execute `__exit()`, the `__with()` function.
+   * @param \Closure $as - Will receive a **ContextInterface** instance, when finish will execute `__exit()`, the `ending()` function.
    * @return ContextInterface
    * @throws Panic if no context instance, or `__enter()` method does not return `true`.
    */
@@ -1210,7 +1258,7 @@ final class Kernel
     } elseif ($task->hasWith()) {
       $contextTask = $task->getWith();
       $task->setWith($context);
-      yield \__with($contextTask);
+      yield \ending($contextTask);
     }
 
     if ($context instanceof ContextInterface) {
@@ -1251,6 +1299,7 @@ final class Kernel
    * @param \Closure $as Will **receive** _chunk_ of a _task_ `result` for processing.
    * @return void
    * @see https://docs.python.org/3/reference/compound_stmts.html#the-async-for-statement
+   * @see https://docs.python.org/3.10/reference/expressions.html#asynchronous-generator-functions
    */
   public static function asyncFor(AsyncIterator $task, \Closure $as)
   {
@@ -1267,12 +1316,12 @@ final class Kernel
     }
 
     if ($task instanceof ContextInterface)
-      yield \__with($task);
+      yield \ending($task);
   }
 
   /**
-   * Makes an resolvable function from `label` name that's callable with `coroutine_run`, `go`,
-   * `await`/`away`, `spawner` and inturn calls **create_task**.
+   * Makes an resolvable function from `label` name that's callable with `coroutine_run()`, `go()`,
+   * `await()`, `away()`, `spawner()` and inturn calls **create_task()**.
    * The passed in `function` is wrapped to be `awaitAble`. The `label` will be `Define()` and make that _name_ a **global** `constant`.
    *
    * - This will store a closure in `Co` static class with supplied `label` name as key.
@@ -1289,7 +1338,11 @@ final class Kernel
       yield;
       $coroutine = \coroutine();
       try {
-        $result = yield $function(...$args);
+        $async = $function(...$args);
+        if ($async === null)
+          return;
+
+        $result = yield $async;
       } catch (\Throwable $error) {
         yield;
         $task = $coroutine->getTask(yield \current_task());

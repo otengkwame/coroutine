@@ -14,6 +14,7 @@ namespace Async\Misc;
  * `async_for()` resolves the _awaitables_ returned by an asynchronous `iterator’s` __`current()`__ method.
  *
  * @see https://www.python.org/dev/peps/pep-0492/#asynchronous-iterators-and-async-for
+ * @see https://docs.python.org/3.10/reference/expressions.html#asynchronous-generator-functions
  */
 abstract class AsyncIterator implements \Iterator
 {
@@ -24,8 +25,7 @@ abstract class AsyncIterator implements \Iterator
    *
    * @return mixed Can return any type.
    */
-  #[\ReturnTypeWillChange]
-  abstract public function current();
+  abstract public function current(): \Generator;
 
   /**
    * Checks if current position is valid.

@@ -32,7 +32,7 @@ class SemaphoreTest extends TestCase
       $this->assertEquals($sema->value(), 0);
       $this->results[] = $label . ' acquire';
       yield sleep_for(0.25);
-      yield __with($sema);
+      yield ending($sema);
       $this->results[] = $label . ' release';
     });
 
@@ -74,7 +74,7 @@ class SemaphoreTest extends TestCase
       yield async_with($sema);
       $this->results[] = $label . ' acquire';
       yield sleep_for($seconds);
-      yield __with($sema);
+      yield ending($sema);
       $this->results[] = $label . ' release';
     });
 
@@ -113,7 +113,7 @@ class SemaphoreTest extends TestCase
       $this->results[] = 'lock_wait';
       try {
         yield async_with($lck);
-        yield __with($lck);
+        yield ending($lck);
         $this->results[] = 'never here';
       } catch (CancelledError $th) {
         $this->results[] = 'lock_cancel';
@@ -129,7 +129,7 @@ class SemaphoreTest extends TestCase
       $this->results[] = 'cancel_start';
       yield cancel_task($task);
       $this->results[] = 'cancel_done';
-      yield __with($lck);
+      yield ending($lck);
     });
 
     \coroutine_run(worker_cancel, 1);
@@ -206,7 +206,7 @@ class SemaphoreTest extends TestCase
       yield sleep_for($seconds);
       $this->results[] = 'sleep_done';
       yield join_task($w);
-      yield __with($lck);
+      yield ending($lck);
     });
 
     \coroutine_run(worker_timeout, 1);

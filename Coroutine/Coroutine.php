@@ -879,7 +879,7 @@ final class Coroutine implements CoroutineInterface
               $this->taskGroupMap[$id] = ($state === 'erred') ? $final : $result;
               $unjoined->sendValue($this->taskGroupMap[$id]);
               $this->schedule($unjoined);
-            } elseif (!$isTaskGroup) {
+            } elseif (!$isTaskGroup && $id !== null) {
               if ($task->exception() instanceof CancelledError)
                 $this->cancelTask($id);
               else

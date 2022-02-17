@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace Async\Tests;
 
-use Async\Co;
 use Async\RuntimeError;
 use Async\CancelledError;
 use Async\TaskCancelled;
@@ -17,14 +16,6 @@ use Async\TaskTimeout;
 use Async\Misc\Event;
 use Async\Misc\TaskGroup;
 use PHPUnit\Framework\TestCase;
-
-if (!\function_exists('test_raises')) {
-  function test_raises(TestCase $test, string $exception, callable $function, ...$arguments)
-  {
-    $test->expectException($exception);
-    return $function(...$arguments);
-  }
-}
 
 class TaskGroupTest extends TestCase
 {
@@ -57,7 +48,7 @@ class TaskGroupTest extends TestCase
       $t1 = yield $g->spawn(child, 1, 1);
       $t2 = yield $g->spawn(child, 2, 2);
       $t3 = yield $g->spawn(child, 3, 3);
-      yield __with($g);
+      yield ending($g);
 
       $this->assertEquals(result_for($t1), 2);
       $this->assertEquals(result_for($t2), 4);
@@ -92,7 +83,7 @@ class TaskGroupTest extends TestCase
       $g = yield async_with(task_group([$t1, $t2, $t3]));
       yield $this->evt->set();
       yield $g->add_task($t4);
-      yield __with($g);
+      yield ending($g);
 
       $this->assertEquals(result_for($t1), 2);
       $this->assertEquals(result_for($t2), 4);
@@ -122,7 +113,7 @@ class TaskGroupTest extends TestCase
       $t1 = yield $g->spawn(child, 1, 1);
       $t2 = yield $g->spawn(child2, 2, 2);
       $t3 = yield $g->spawn(child2, 3, 3);
-      yield __with($g);
+      yield ending($g);
 
       $this->assertEquals(result_for($t1), 2);
       $this->assertEquals($g->completed(), $t1);
@@ -152,7 +143,7 @@ class TaskGroupTest extends TestCase
       $t1 = yield $g->spawn(child, 1, '1');
       $t2 = yield $g->spawn(child2, 2, 2);
       $t3 = yield $g->spawn(child2, 3, 3);
-      yield __with($g);
+      yield ending($g);
 
       try {
         $result =  $g->result();
@@ -209,7 +200,7 @@ class TaskGroupTest extends TestCase
       $g = yield async_with(task_group([], 'None'));
       $t2 = yield $g->spawn(child2, 2, 2);
       $t3 = yield $g->spawn(child2, 3, 3);
-      yield __with($g);
+      yield ending($g);
 
       $this->assertTrue(is_cancelled($t2));
       $this->assertTrue(is_cancelled($t3));
@@ -232,7 +223,7 @@ class TaskGroupTest extends TestCase
       $t1 = yield $g->spawn(child, 1, 1);
       $t2 = yield $g->spawn(child, 2, 2);
       $t3 = yield $g->spawn(child, 3, 'bad');
-      yield __with($g);
+      yield ending($g);
 
       if (\IS_PHP8)
         $this->assertInstanceOf(\TypeError::class, exception_for($t3));
@@ -312,7 +303,7 @@ class TaskGroupTest extends TestCase
       //exception_for($t2);
 
       yield $this->evt->set();
-      yield __with($g);
+      yield ending($g);
 
       # Assert that other tasks ran to completion
       $this->assertFalse(is_cancelled($t2));
@@ -385,7 +376,7 @@ class TaskGroupTest extends TestCase
           $t1 = yield $g->spawn(child);
           $t2 = yield $g->spawn(child);
           $t3 = yield $g->spawn(child);
-          yield __with($g);
+          yield ending($g);
         } catch (CancelledError $th) {
           $this->assertTrue(is_cancelled($t1));
           $this->assertTrue(is_cancelled($t2));
@@ -454,7 +445,7 @@ class TaskGroupTest extends TestCase
     async('main', function () {
       /** @var TaskGroup */
       $g = yield async_with(new TaskGroup());
-      yield __with($g);
+      yield ending($g);
 
       $this->assertNull($g->exception());
       $this->assertEquals([], $g->exceptions());
@@ -478,58 +469,62 @@ class TaskGroupTest extends TestCase
 
     coroutine_run(suicidal_task);
   }
-  /*
-def test_task_group_result(kernel):
-    async def child(x, y):
-        return x + y
 
+  public function test_task_group_result()
+  {
+    async('child', function ($x, $y) {
+      return value($x + $y);
+    });
 
-    async def main():
-        async with TaskGroup(wait=any) as g:
-            await g.spawn(child, 1, 1)
-            await g.spawn(child, 2, 2)
-            await g.spawn(child, 3, 3)
+    async('main', function () {
+      /** @var TaskGroup */
+      $g = yield async_with(new TaskGroup([], 'any'));
+      yield $g->spawn(child, 1, 1);
+      yield $g->spawn(child, 2, 2);
+      yield $g->spawn(child, 3, 3);
+      yield ending($g);
 
+      $this->assertEquals(2, $g->result());
+    });
 
-        assert g.result == 2
+    \coroutine_run(main);
+  }
 
-    kernel.run(main())
+  public function test_late_join()
+  {
+    async('child', pass);
 
+    async('main', function () {
+      $t = yield spawner(child);
+      yield sleep_for(0.1);
+      yield cancel_task($t);
+      $this->assertTrue(is_joined($t));
+      $this->assertTrue(is_terminated($t));
+      $this->assertFalse(is_cancelled($t));
+    });
 
-def test_late_join(kernel):
-    async def child():
-        pass
+    coroutine_run(main);
+  }
 
+  public function test_task_group_join_done()
+  {
+    async('add', function ($x, $y) {
+      return value($x + $y);
+    });
 
-    async def main():
-        t = await spawn(child)
-        await sleep(0.1)
-        await t.cancel()
-        assert t.joined
-        assert t.terminated
-        assert not t.cancelled
+    async('task', function () {
+      /** @var TaskGroup */
+      $w = yield async_with(new TaskGroup());
+      yield $w->spawn(add, 1, 1);
+      yield $w->spawn(add, 2, 2);
+      $t3 = yield $w->spawn(add, 3, 3);
+      $r3 = yield join_task($t3);
+      $this->assertEquals(6, $r3);
+      yield ending($w);
 
+      $this->assertEquals([3 => 2, 4 => 4], $w->results());
+    });
 
-    kernel.run(main)
-
-
-def test_task_group_join_done(kernel):
-    async def add(x, y):
-        return x + y
-
-
-    async def task():
-        async with TaskGroup(wait=all) as w:
-            await w.spawn(add, 1, 1)
-            await w.spawn(add, 2, 2)
-            t3 = await w.spawn(add, 3, 3)
-            r3 = await t3.join()
-            assert r3 == 6
-
-
-        assert w.results == [2, 4]
-
-    kernel.run(task)
-
-*/
+    coroutine_run(task);
+  }
 }

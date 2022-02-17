@@ -200,6 +200,9 @@ final class Task implements TaskInterface
 
   public function setException($exception)
   {
+    if ($exception instanceof CancelledError)
+      $this->joined = true;
+
     $this->error = $this->exception = $exception;
   }
 
@@ -300,9 +303,16 @@ final class Task implements TaskInterface
 
   public function isFinished(): bool
   {
-    return ($this->coroutine instanceof \Generator)
-      ? !$this->coroutine->valid()
-      : true;
+    $bool = ($this->coroutine instanceof \Generator) ? !$this->coroutine->valid() : true;
+    if ($bool)
+      $this->joined = true;
+
+    return $bool;
+  }
+
+  public function isJoined(): bool
+  {
+    return $this->joined;
   }
 
   public function hasCaller(): bool
@@ -448,7 +458,6 @@ final class Task implements TaskInterface
   {
     yield $this->wait();
     $this->discardGroup();
-    $this->joined = true;
     if ($this->error)
       \panic($this->error);
     else

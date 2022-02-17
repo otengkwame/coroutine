@@ -20,7 +20,7 @@ use Async\Misc\ContextAsyncIterator;
  *
  *       $g = async_with(new TaskGroup([$t1, $t2, $t3]));
  *             // ... other `$g` methods.
- *       yield __with($g);
+ *       yield ending($g);
  *          ...
  *
  *   Alternatively, tasks can be spawned into a task group.
@@ -30,7 +30,7 @@ use Async\Misc\ContextAsyncIterator;
  *          yield $g->spawn(coro2);
  *          yield $g->spawn(coro3);
  *
- *         yield __with($g);
+ *         yield ending($g);
  *```
  *
  * Task groups are often used to gather results. If any managed task exits with an error, all remaining tasks
@@ -41,7 +41,7 @@ use Async\Misc\ContextAsyncIterator;
  *```php
  *     $g = async_with(task_group());
  *         ...
- *      yield __with($g);
+ *      yield ending($g);
  *
  *    print($g->result);    # Result of the first task to exit
  *    print($g->results);   # List of all results computed
@@ -62,7 +62,7 @@ use Async\Misc\ContextAsyncIterator;
  *            # Or
  *       yield join_task($t1);
  *           ...
- *       yield __with($g);
+ *       yield ending($g);
  *```
  *
  *    Normally, a task group is used as a context manager.  This
@@ -232,7 +232,7 @@ final class TaskGroup extends ContextAsyncIterator
    * Wait for the next task to finish and return it. This removes it from the group.
    * - This function needs to be prefixed with `yield`
    *
-   * @return int|null task Id
+   * @return mixed `int`|`null` a task Id instance
    */
   public function next_done()
   {
@@ -479,7 +479,16 @@ final class TaskGroup extends ContextAsyncIterator
             $coroutine->setGroupResult($tid, $task->exception());
           }
 
-          yield \cancel_task($tid, null, 'Invalid task ID!', true);
+          // Only schedule throws when cancelled by errors, not when completed successful
+          if (
+            $this->wait == 'any'
+            && $this->completed !== null
+            && !$this->completed[$this->completed()] instanceof \Throwable
+          )
+            $coroutine->cancelTask($tid);
+          else
+            yield \cancel_task($tid, null, 'Invalid task ID!', true);
+
           $this->task_discard($task);
         }
       }
@@ -523,7 +532,7 @@ final class TaskGroup extends ContextAsyncIterator
     parent::__destruct();
   }
 
-  public function current()
+  public function current(): \Generator
   {
     return $this->next_done();
   }
