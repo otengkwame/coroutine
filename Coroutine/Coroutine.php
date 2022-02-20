@@ -737,7 +737,10 @@ final class Coroutine implements CoroutineInterface
 
   public function getGroupResult(int $tid)
   {
-    return $this->taskGroupMap[$tid];
+    $result = $this->taskGroupMap[$tid];
+    unset($this->taskGroupMap[$tid]);
+
+    return $result;
   }
 
   public function setGroupResult(int $tid, $value): void

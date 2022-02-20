@@ -17,11 +17,9 @@ class AsyncAwaitTest extends TestCase
     public function taskAsyncPanickingSame()
     {
         $this->expectException(Panicking::class);
-        \async('childTask', function ($av = null) {
-        });
+        \async('childTask', pass);
 
-        \async('childTask', function ($av = null) {
-        });
+        \async('childTask', pass);
 
         yield \shutdown();
     }
@@ -54,11 +52,12 @@ class AsyncAwaitTest extends TestCase
         });
 
         \async('repeat', function (int $stop) {
+            $result = null;
             $counter = 0;
             while (true) {
                 $counter++;
                 if ($counter == $stop) {
-                    $result = yield \await('already', $stop);
+                    $result = yield \await(already, $stop);
                     break;
                 }
                 yield;
@@ -78,7 +77,7 @@ class AsyncAwaitTest extends TestCase
             }
         });
 
-        $value = yield \await('repeat', 6);
+        $value = yield \await(repeat, 6);
         yield \cancel_task($toCancel);
 
         $this->assertGreaterThanOrEqual(7, $this->result);

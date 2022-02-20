@@ -1566,7 +1566,6 @@ final class Kernel
       $result = $coroutine->getGroupResult($tid);
     } elseif ($coroutine->isCompleted($tid)) {
       $result = $coroutine->getCompleted($tid)->result();
-      $coroutine->setGroupResult($tid, $result);
       $coroutine->updateCompleted($tid);
     } elseif ($coroutine->getTask($tid)) {
       throw new InvalidStateError("{$tid}");
@@ -1593,7 +1592,6 @@ final class Kernel
       $exception = $coroutine->getGroupResult($tid);
     } elseif ($coroutine->isCompleted($tid)) {
       $exception = $coroutine->getCompleted($tid)->exception();
-      $coroutine->setGroupResult($tid, $exception);
       $coroutine->updateCompleted($tid);
     } elseif ($coroutine->getTask($tid)) {
       throw new InvalidStateError("{$tid}");

@@ -199,6 +199,7 @@ final class TaskGroup extends ContextAsyncIterator
     if ($coroutine->isGroup($tid)) {
       $result = $coroutine->getGroupResult($tid);
       $this->finished[$tid] = $result;
+      $coroutine->setGroupResult($tid, $result);
     } elseif ($coroutine->isCompleted($tid)) {
       $this->task_done($coroutine->getCompleted($tid));
     } elseif ($task instanceof TaskInterface) {
