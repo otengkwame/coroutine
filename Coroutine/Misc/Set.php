@@ -65,11 +65,11 @@ final class Set implements SetIterator
   /**
    * The initial **array** of elements.
    *
-   * @param mixed $elements
+   * @param \Traversable|array $elements
    */
   public function __construct(...$elements)
   {
-    $this->array = \array_unique((isset($elements[0]) && \is_array($elements[0]) ? $elements[0] : $elements), \SORT_REGULAR);
+    $this->array = $this->elements(...$elements);
   }
 
   public function __invoke(): array

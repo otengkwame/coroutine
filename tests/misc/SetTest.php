@@ -17,10 +17,10 @@ class SetTest extends TestCase
 
   public function testAddClearCopy()
   {
-    $array = new Set("apple", "banana", "cherry");
-    $array->add("apple");
+    $array = new Set("apple", "banana", "cherry", "apple", "banana");
+    $array->add("cherry");
     $array->add("orange");
-    $this->assertEquals(['apple', 'banana', 'cherry', 'orange'], $array->copy());
+    $this->assertEquals(['apple', 'banana', 'cherry', 'orange'], $array());
     $array->clear();
     $this->assertEquals([], $array->copy());
   }
@@ -29,7 +29,7 @@ class SetTest extends TestCase
   {
     $array = new Set("apple", "banana", "cherry");
     $array->remove("banana");
-    $this->assertEquals(['apple', 'cherry'], $array->copy());
+    $this->assertEquals(['apple', 'cherry'], $array());
   }
 
   public function testRemoveError()
@@ -49,7 +49,7 @@ class SetTest extends TestCase
   public function testDifference_update()
   {
     $array = new Set("apple", "banana", "cherry");
-    $this->assertEquals(['banana', 'cherry'], $array->difference_update("google", "microsoft", "apple")->copy());
+    $this->assertEquals(['banana', 'cherry'], $array->difference_update("google", "microsoft", "apple")());
   }
 
   public function testDiscard()
@@ -133,7 +133,7 @@ class SetTest extends TestCase
     $array = new Set("apple", "banana", "cherry");
     $this->assertEquals(
       ['apple', 'banana', 'cherry', 'google', 'microsoft'],
-      $array->update("google", "microsoft", "apple")->copy()
+      $array->update("google", "microsoft", "apple")()
     );
   }
 
