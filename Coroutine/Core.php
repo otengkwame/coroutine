@@ -30,6 +30,23 @@ if (!\function_exists('coroutine_run')) {
     \define('IS_PHP81', ((float) \phpversion() >= 8.1));
 
   /**
+   * A construct to _return_ an **associative** `array`, a dictionary.
+   *
+   * @param string|int $key
+   * @param mixed $value
+   * @return array
+   */
+  function kv($key, $value): array
+  {
+    return [$key => $value];
+  }
+
+  /**
+   * A construct to _return_ an **associative** `array`, a dictionary.
+   */
+  \define('kv', 'kv');
+
+  /**
    * Returns a random float between two numbers.
    *
    * Works similar to Python's `random.uniform()`
@@ -942,6 +959,8 @@ if (!\function_exists('coroutine_run')) {
    * Reset all `Coroutine` **global/static** `Co` variable data, including `async` functions defined.
    * Can also setup a task's unique `starting` id. This is mainly used for testing only.
    *
+   * Just calling this function will also setup *order mode* for `Set` class, to **ordered** for testing purposes.
+   *
    * @param boolean $unique
    * @param integer $starting - Set a fixed starting number, otherwise creates a cryptographically secure integer
    * @return void
@@ -958,6 +977,7 @@ if (!\function_exists('coroutine_run')) {
     Co::reset();
     Co::resetAsync();
     Co::setUnique('dirty', 1);
+    Co::setMode(true);
     Co::setUnique('max', ($unique ? \random_int(10000, 9999999999) : $starting));
   }
 

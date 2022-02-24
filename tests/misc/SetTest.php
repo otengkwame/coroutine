@@ -56,7 +56,7 @@ class SetTest extends TestCase
   {
     $array = new Set("apple", "banana", "cherry");
     $array->discard("banana");
-    $this->assertEquals(['apple', 'cherry'], $array->copy());
+    $this->assertEquals(['apple', 'cherry'], $array());
   }
 
   public function testIntersection()
@@ -74,7 +74,7 @@ class SetTest extends TestCase
 
   public function testisDisjoint()
   {
-    $array = new Set("apple", "banana", "cherry");;
+    $array = new Set("apple", "banana", "cherry");
     $this->assertTrue($array->isDisjoint("google", "microsoft", "facebook"));
   }
 
@@ -94,7 +94,7 @@ class SetTest extends TestCase
   {
     $array = new Set("apple", "banana", "cherry");
     $this->assertEquals('cherry', $array->pop());
-    $this->assertEquals(['apple', 'banana'], $array->copy());
+    $this->assertEquals(['apple', 'banana'], $array());
   }
 
   public function testPopError()

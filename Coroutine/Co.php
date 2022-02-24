@@ -54,6 +54,11 @@ final class Co
    */
   protected static $functions;
 
+  /**
+   * @var bool
+   */
+  protected static $setMode = false;
+
   public static function setLoop(CoroutineInterface $loop): void
   {
     self::$instance = $loop;
@@ -196,6 +201,16 @@ final class Co
   public static function getTiming(string $tag): float
   {
     return self::$timer[$tag];
+  }
+
+  public static function setMode(bool $ordered = false): void
+  {
+    self::$setMode = $ordered;
+  }
+
+  public static function getSetMode(): bool
+  {
+    return self::$setMode;
   }
 
   public static function reset(): void

@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace Async\Misc;
 
+use Async\Co;
 use Async\KeyError;
 use Async\Misc\SetIterator;
 
 /**
  * An **array** class that mimics Python's **set()** class, where as, `Set` element **items** are _unordered_,
  * _unchangeable_, and _do not_ allow duplicate values.
-
- * - Involving a `$Set()` instance WILL **return** a _shadow_ copy **array** of `Set` elements.
+ *
+ * - Invoking a `$Set();` instance WILL **return** a _shadow_ copy **array** of `Set` elements.
  *
  * **Unordered**
  * - Unordered means that the items in a set do not have a defined order.
@@ -52,6 +53,9 @@ final class Set implements SetIterator
       }
 
       $elements = \array_unique($elements, \SORT_REGULAR);
+
+      if (!Co::getSetMode())
+        \shuffle($elements);
     }
 
     return $elements;
@@ -59,7 +63,7 @@ final class Set implements SetIterator
 
   public function __destruct()
   {
-    $this->clear();
+    unset($this->array);
   }
 
   /**
@@ -247,7 +251,6 @@ final class Set implements SetIterator
 
   public function clear(): void
   {
-    unset($this->array);
     $this->array = [];
   }
 }
