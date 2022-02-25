@@ -39,6 +39,7 @@ class TupleTest extends TestCase
   {
     $constant = new Tuple("apple", "banana", "cherry");
     $this->assertTrue($constant->in('banana'));
+    $this->assertTrue($constant->not_in('orange'));
 
     $this->expectException(KeyError::class);
     $constant->index('orange');
@@ -57,5 +58,17 @@ class TupleTest extends TestCase
   {
     $constant = new Tuple("abc");
     $this->assertEquals(['a', 'b', 'c'], $constant());
+    $constant->del();
+    $this->expectException(KeyError::class);
+    $constant = new Tuple(1);
+  }
+
+  public function testTupleSingle()
+  {
+    $constant = new Tuple(1, null);
+    $this->assertEquals([1], $constant());
+    $constant->del();
+    $constant = new Tuple("abc", '');
+    $this->assertEquals(['abc'], $constant());
   }
 }

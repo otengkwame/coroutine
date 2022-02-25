@@ -48,7 +48,13 @@ final class Tuple implements TupleIterator
         foreach ($items[0] as $value)
           $elements[] = $value;
       } else {
-        $elements = (isset($items[0]) && \is_string($items[0]) && \count($items) === 1) ? \str_split($items[0]) : $items;
+        try {
+          $elements = (isset($items[0]) && \count($items) === 1) ? \str_split($items[0]) : $items;
+          if (\count($elements) === 2 && empty($elements[1]))
+            \array_pop($elements);
+        } catch (\Throwable $e) {
+          throw new KeyError($e->getMessage());
+        }
       }
     }
 
@@ -61,9 +67,13 @@ final class Tuple implements TupleIterator
   }
 
   /**
-   * The initial `constant` **array** of elements.
+   * The initial `constant` **array** of elements. `Tuples` require at least `2` element members.
+   * - Passing a single element will be expanded, like a _string_ `new Tuple('abc');` to actually `new Tuple('a', 'b', 'c')`;
+   * - To create a single element, do `new Tuple('abc', '' or null);` the extra `'' or null` will be removed.
+   * - This will only work for `strings` anything else **throws** `KeyError`.
    *
    * @param \Traversable|array $elements
+   * @throws KeyError If _less_ than `2` elements, and not a `string`
    */
   public function __construct(...$elements)
   {
@@ -106,6 +116,11 @@ final class Tuple implements TupleIterator
   public function in($value): bool
   {
     return \in_array($value, $this->constant, true);
+  }
+
+  public function not_in($value): bool
+  {
+    return $this->in($value) === false;
   }
 
   public function index($value): int

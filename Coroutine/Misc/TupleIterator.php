@@ -28,10 +28,18 @@ interface TupleIterator extends \IteratorAggregate, \Countable
   /**
    * Test `value` for membership in `Tuple`.
    *
-   * @param mixed $item
+   * @param mixed $value
    * @return bool
    */
   public function in($value): bool;
+
+  /**
+   * Test `value` for not a membership in `Tuple`.
+   *
+   * @param mixed $value
+   * @return bool
+   */
+  public function not_in($value): bool;
 
   /**
    * Delete the `Tuple` instance completely.
