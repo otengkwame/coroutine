@@ -11,7 +11,6 @@ use Async\KeyError;
  */
 interface SetIterator extends \IteratorAggregate, \Countable
 {
-
   /**
    * Returns a **shadow** copy of the __array__ in `Set`.
    *
@@ -59,6 +58,7 @@ interface SetIterator extends \IteratorAggregate, \Countable
    * @return boolean
    */
   public function isSubset(...$items): bool;
+
   /**
    * Test whether every element in `items` is in the `Set`.
    * Tests whether the `Set` is a proper **superset** of `items`.

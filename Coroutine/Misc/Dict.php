@@ -9,11 +9,12 @@ use Async\Misc\DictIterator;
 
 /**
  * An **associative** _array_ class that mimics Python's **Dict()** dictionary class, where as, `Dict` element **items**
- * are _ordered_, _changeable_, and _do not_ allow duplicates.
+ * are _ordered_, _changeable_, and _do not_ allow duplicates. A dictionary’s keys are almost arbitrary values.
+ * Values that are not hash-able, that is, values containing lists, dictionaries or other mutable types may not be used as keys.
  *
  * - _Invoking_ a `$Dict();` instance will **return** a _shadow_ copy **associative** _array_ of `Dict` elements.
  * - _Adding/Updating_ a `key` by direct property `$Dict->key = $value;` same as `$Dict["key"] = $value;`
- * - _Returning_ a `$value` for a `key` by direct property `$Dict->key;` same as `$Dict["key"];`
+ * - _Getting_ a `$value` for a `key` by direct property `$Dict->key;` same as `$Dict["key"];`
  *
  * **Ordered**
  * - Dictionaries are ordered, means that the items have a defined order, and that order will not change.
@@ -112,6 +113,12 @@ final class Dict implements DictIterator
       $this->assoc[$key] = $default;
 
     return $default;
+  }
+
+  public function reversed(): \Iterator
+  {
+    $reversed = \array_reverse($this->assoc, true);
+    return new \ArrayIterator($reversed, 1);
   }
 
   public function iter(): \Iterator

@@ -7,7 +7,7 @@ namespace Async\Misc;
 use Async\KeyError;
 
 /**
- * `DictIterator` a element **associative** _array_ of `items` that's _ordered_, _changeable_, and _do not_ allow duplicates.
+ * `DictIterator` a **associative** element _array_ of `items` that's _ordered_, _changeable_, and _do not_ allow duplicates.
  */
 interface DictIterator extends \IteratorAggregate, \Countable
 {

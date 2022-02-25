@@ -10,9 +10,9 @@ use Async\Misc\SetIterator;
 
 /**
  * An **array** class that mimics Python's **set()** class, where as, `Set` element **items** are _unordered_,
- * _unchangeable_, and _do not_ allow duplicate values.
+ * _unchangeable_, and _do not_ allow duplicate values. **Sets** do not support indexing, slicing, or other sequence-like behavior.
  *
- * - Invoking a `$Set();` instance WILL **return** a _shadow_ copy **array** of `Set` elements.
+ * - _Invoking_ a `$Set();` instance will **return** a _shadow_ copy **array** of `Set` elements.
  *
  * **Unordered**
  * - Unordered means that the items in a set do not have a defined order.
