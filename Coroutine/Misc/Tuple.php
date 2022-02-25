@@ -24,7 +24,7 @@ use Async\Misc\TupleIterator;
  * - Since tuples are indexed, they can have items with the same value.
  *
  * @see https://docs.python.org/3.10/library/stdtypes.html#tuples
- * @property-read mixed $index
+ * @property-read mixed $index[] To return the `value` for a index[__number__].
  */
 final class Tuple implements TupleIterator
 {
@@ -32,8 +32,6 @@ final class Tuple implements TupleIterator
    * @var array
    */
   protected $constant = [];
-
-  protected $internal = false;
 
   /**
    * @param \Traversable|array $items
@@ -69,8 +67,8 @@ final class Tuple implements TupleIterator
   /**
    * The initial `constant` **array** of elements. `Tuples` require at least `2` element members.
    * - Passing a single element will be expanded, like a _string_ `new Tuple('abc');` to actually `new Tuple('a', 'b', 'c')`;
-   * - To create a single element, do `new Tuple('abc', '' or null);` the extra `'' or null` will be removed.
-   * - This will only work for `strings` anything else **throws** `KeyError`.
+   * - To create a single element, do `new Tuple(1, '' or null);` the extra `'' or null` will be removed.
+   * - The expansion only work for `strings` anything else **throws** `KeyError`.
    *
    * @param \Traversable|array $elements
    * @throws KeyError If _less_ than `2` elements, and not a `string`
