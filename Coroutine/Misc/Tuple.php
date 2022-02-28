@@ -11,8 +11,8 @@ use Async\Misc\TupleIterator;
  * An `constant` **array** class that mimics Python's **tuple()** class, where as, `Tuple` element **items** are _ordered_,
  * _unchangeable_, and _allow_ duplicates. **Tuples** are immutable sequences, typically used to store collections of heterogeneous data.
  *
- * - _Invoking_ a `$Tuple();` instance will **return** a _shadow_ copy `constant` **array** of `Tuple` elements.
- * - _Getting_ a `$value` for a _numbered_ `index` by direct property `$Tuple->index[0];` same as `$Tuple[0];`
+ * - _Invoking_ a `$Tuple();` **instance** will **return** a _shadow_ copy `constant` **array** of `Tuple` elements.
+ * - _Getting_ a `$value` for a _numbered_ `index` by direct **instance** `$Tuple[number];`
  *
  * **Ordered**
  * - When we say that tuples are ordered, it means that the items have a defined order, and that order will not change.
@@ -24,7 +24,6 @@ use Async\Misc\TupleIterator;
  * - Since tuples are indexed, they can have items with the same value.
  *
  * @see https://docs.python.org/3.10/library/stdtypes.html#tuples
- * @property-read mixed $index[] To return the `value` for a index[__number__].
  */
 final class Tuple implements TupleIterator
 {
@@ -34,7 +33,7 @@ final class Tuple implements TupleIterator
   protected $constant = [];
 
   /**
-   * @param \Traversable|array $items
+   * @param \Traversable|mixed $items
    * @return array
    */
   protected function elements(...$items): array
@@ -47,7 +46,7 @@ final class Tuple implements TupleIterator
           $elements[] = $value;
       } else {
         try {
-          $elements = (isset($items[0]) && \count($items) === 1) ? \str_split($items[0]) : $items;
+          \array_push($elements, ...((isset($items[0]) && \count($items) === 1) ? \str_split($items[0]) : $items));
           if (\count($elements) === 2 && empty($elements[1]))
             \array_pop($elements);
         } catch (\Throwable $e) {
@@ -70,7 +69,7 @@ final class Tuple implements TupleIterator
    * - To create a single element, do `new Tuple(1, '' or null);` the extra `'' or null` will be removed.
    * - The expansion only work for `strings` anything else **throws** `KeyError`.
    *
-   * @param \Traversable|array $elements
+   * @param \Traversable|mixed $elements
    * @throws KeyError If _less_ than `2` elements, and not a `string`
    */
   public function __construct(...$elements)
@@ -85,10 +84,31 @@ final class Tuple implements TupleIterator
 
   public function __get($index)
   {
-    if ($index === 'index')
-      return $this->constant;
+    throw new KeyError('`' . $index . '` not in `Tuple` instance!');
+  }
 
-    throw new KeyError('The `' . $index . '` index not in `Tuple`!');
+  public function offsetExists($offset): bool
+  {
+    return isset($this->constant[$offset]);
+  }
+
+  #[\ReturnTypeWillChange]
+  public function offsetGet($offset)
+  {
+    if (isset($this->constant[$offset]))
+      return $this->constant[$offset];
+
+    throw new KeyError('`' . $offset . '` not in `Tuple!`');
+  }
+
+  public function offsetSet($offset, $value): void
+  {
+    throw new KeyError('Tuples are unchangeable!');
+  }
+
+  public function offsetUnset($offset): void
+  {
+    throw new KeyError('Tuples are unchangeable!');
   }
 
   public function getIterator(): \Traversable
@@ -131,6 +151,6 @@ final class Tuple implements TupleIterator
 
   public function del(): void
   {
-    unset($this->constant);
+    $this->__destruct();
   }
 }

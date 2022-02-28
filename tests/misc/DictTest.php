@@ -19,9 +19,11 @@ class DictTest extends TestCase
     $this->assertEquals(['brand' => 'Ford', 'model' => 'Mustang', 'year' => 2020], $assoc());
 
     $assoc->engine = '6.0 awd';
-    $this->assertEquals(['brand' => 'Ford', 'model' => 'Mustang', 'year' => 2020, 'engine' => '6.0 awd'], $assoc->copy());
-    $this->assertEquals(4, $assoc->len());
+    $assoc['color'] = 'red';
+    $this->assertEquals(['brand' => 'Ford', 'model' => 'Mustang', 'year' => 2020, 'engine' => '6.0 awd', 'color' => 'red'], $assoc());
+    $this->assertEquals(5, $assoc->len());
     $this->assertEquals('Mustang', $assoc->model);
+    $this->assertEquals('red', $assoc['color']);
 
     $assoc->clear();
     $this->assertEquals([], $assoc());

@@ -9,10 +9,10 @@ use Async\KeyError;
 use Async\Misc\SetIterator;
 
 /**
- * An **array** class that mimics Python's **set()** class, where as, `Set` element **items** are _unordered_,
+ * An `unique` **array** class that mimics Python's **set()** class, where as, `Set` element **items** are _unordered_,
  * _unchangeable_, and _do not_ allow duplicate values. **Sets** do not support indexing, slicing, or other sequence-like behavior.
  *
- * - _Invoking_ a `$Set();` instance will **return** a _shadow_ copy **array** of `Set` elements.
+ * - _Invoking_ a `$Set();` instance will **return** a _shadow_ copy `unique` **array** of `Set` elements.
  *
  * **Unordered**
  * - Unordered means that the items in a set do not have a defined order.
@@ -32,12 +32,12 @@ final class Set implements SetIterator
   /**
    * @var array
    */
-  protected $array = [];
+  protected $unique = [];
 
   protected $internal = false;
 
   /**
-   * @param \Traversable|array $items
+   * @param \Traversable|mixed $items
    * @return array
    */
   protected function elements(...$items): array
@@ -49,7 +49,7 @@ final class Set implements SetIterator
         foreach ($items[0] as $value)
           $elements[] = $value;
       } else {
-        $elements = $items;
+        \array_push($elements, ...$items);
       }
 
       $elements = \array_unique($elements, \SORT_REGULAR);
@@ -63,17 +63,17 @@ final class Set implements SetIterator
 
   public function __destruct()
   {
-    unset($this->array);
+    unset($this->unique);
   }
 
   /**
-   * The initial **array** of elements.
+   * The initial `unique` **array** of elements.
    *
-   * @param \Traversable|array $elements
+   * @param \Traversable|mixed $elements
    */
   public function __construct(...$elements)
   {
-    $this->array = $this->elements(...$elements);
+    $this->unique = $this->elements(...$elements);
   }
 
   public function __invoke(): array
@@ -83,7 +83,7 @@ final class Set implements SetIterator
 
   public function getIterator(): \Traversable
   {
-    return new \ArrayIterator($this->array, 1);
+    return new \ArrayIterator($this->unique, 1);
   }
 
   public function count(): int
@@ -93,12 +93,12 @@ final class Set implements SetIterator
 
   public function len(): int
   {
-    return \count($this->array);
+    return \count($this->unique);
   }
 
   public function in($item): bool
   {
-    return \in_array($item, $this->array, true);
+    return \in_array($item, $this->unique, true);
   }
 
   public function not_in($item): bool
@@ -120,12 +120,12 @@ final class Set implements SetIterator
   public function isSuperset(...$items): bool
   {
     $elements = $this->elements(...$items);
-    return (bool)!\array_diff($elements, $this->array);
+    return (bool)!\array_diff($elements, $this->unique);
   }
 
   public function copy(): array
   {
-    return \array_values($this->array);
+    return \array_values($this->unique);
   }
 
   public function union(...$items): array
@@ -138,7 +138,7 @@ final class Set implements SetIterator
           $current[] = $value;
       }
 
-      $current = \array_merge($this->array, $current);
+      $current = \array_merge($this->unique, $current);
     }
 
     return $this->internal ? $current : \array_values($current);
@@ -150,7 +150,7 @@ final class Set implements SetIterator
     $elements = $this->union(...$items);
     $this->internal = false;
     if (\count($elements) > 0)
-      $this->array = $elements;
+      $this->unique = $elements;
 
     return $this;
   }
@@ -159,7 +159,7 @@ final class Set implements SetIterator
   {
     $elements = $this->elements(...$items);
     if (\count($elements) > 0)
-      $elements = \array_intersect($this->array, $elements);
+      $elements = \array_intersect($this->unique, $elements);
 
     return $this->internal ? $elements : \array_values($elements);
   }
@@ -170,7 +170,7 @@ final class Set implements SetIterator
     $elements = $this->intersection(...$items);
     $this->internal = false;
     if (\count($elements) > 0)
-      $this->array = $elements;
+      $this->unique = $elements;
 
     return $this;
   }
@@ -179,7 +179,7 @@ final class Set implements SetIterator
   {
     $elements = $this->elements(...$items);
     if (\count($elements) > 0)
-      $elements = \array_diff($this->array, $elements);
+      $elements = \array_diff($this->unique, $elements);
 
     return $this->internal ? $elements : \array_values($elements);
   }
@@ -190,7 +190,7 @@ final class Set implements SetIterator
     $elements = $this->difference(...$items);
     $this->internal = false;
     if (\count($elements) > 0)
-      $this->array = $elements;
+      $this->unique = $elements;
 
     return $this;
   }
@@ -199,8 +199,8 @@ final class Set implements SetIterator
   {
     $elements = $this->elements(...$items);
     if (\count($elements) > 0) {
-      $elements1 = \array_diff($this->array, $elements);
-      $elements2 = \array_diff($elements, $this->array);
+      $elements1 = \array_diff($this->unique, $elements);
+      $elements2 = \array_diff($elements, $this->unique);
       $elements = \array_merge($elements1, $elements2);
     }
 
@@ -213,7 +213,7 @@ final class Set implements SetIterator
     $elements = $this->symmetric_difference(...$items);
     $this->internal = false;
     if (\count($elements) > 0)
-      $this->array = $elements;
+      $this->unique = $elements;
 
     return $this;
   }
@@ -221,36 +221,35 @@ final class Set implements SetIterator
   public function add($item): void
   {
     if ($this->not_in($item))
-      $this->array[] = $item;
+      $this->unique[] = $item;
   }
 
   public function remove($item): void
   {
     if ($this->not_in($item))
-      throw new KeyError('The element is not in the Set!');
+      throw new KeyError('The element not in `Set`!');
 
-    $index = \array_search($item, $this->array, true);
-    unset($this->array[$index]);
+    $this->discard($item);
   }
 
   public function discard($item): void
   {
-    $index = \array_search($item, $this->array, true);
+    $index = \array_search($item, $this->unique, true);
     if ($index)
-      unset($this->array[$index]);
+      unset($this->unique[$index]);
   }
 
   public function pop()
   {
-    $item = \array_pop($this->array);
+    $item = \array_pop($this->unique);
     if (empty($item))
-      throw new KeyError('The element Set is empty!');
+      throw new KeyError('The element `Set` empty!');
 
     return $item;
   }
 
   public function clear(): void
   {
-    $this->array = [];
+    $this->unique = [];
   }
 }

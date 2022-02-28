@@ -9,10 +9,10 @@ use Async\KeyError;
 /**
  * `DictIterator` a **associative** element _array_ of `items` that's _ordered_, _changeable_, and _do not_ allow duplicates.
  */
-interface DictIterator extends \IteratorAggregate, \Countable
+interface DictIterator extends \IteratorAggregate, \ArrayAccess, \Countable
 {
   /**
-   * Returns a _shadow_ copy **associative** _array_ of `Dict` elements.
+   * Returns a _shadow_ copy **associative** `array` of `Dict` elements.
    *
    * @return array
    */
@@ -66,7 +66,7 @@ interface DictIterator extends \IteratorAggregate, \Countable
   public static function fromKeys(iterable $iterable, $value = None): self;
 
   /**
-   * Returns a _shadow_ copy **associative** _array_ of `Dict` elements.
+   * Returns a _shadow_ copy **associative** `array` of `Dict` elements.
    *
    * @return array
    */

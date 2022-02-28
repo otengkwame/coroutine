@@ -7,12 +7,12 @@ namespace Async\Misc;
 use Async\KeyError;
 
 /**
- * `SetIterator` a element **array** of `items` that's  _unordered_, _unchangeable_, and _do not_ allow duplicate values.
+ * `SetIterator` a `unique` element **array** of `items` that's  _unordered_, _unchangeable_, and _do not_ allow duplicate values.
  */
 interface SetIterator extends \IteratorAggregate, \Countable
 {
   /**
-   * Returns a **shadow** copy of the __array__ in `Set`.
+   * Returns a **shadow** copy `unique` __array__ of `Set` elements.
    *
    * @return array
    */
@@ -69,7 +69,7 @@ interface SetIterator extends \IteratorAggregate, \Countable
   public function isSuperset(...$items): bool;
 
   /**
-   * Returns a **shadow** copy of the __array__ in `Set`.
+   * Returns a **shadow** copy `unique` __array__ of `Set` elements.
    *
    * @return array
    */

@@ -17,10 +17,14 @@ class TupleTest extends TestCase
   {
     $constant = new Tuple("apple", "banana", "cherry", "apple", "banana");
     $this->assertEquals(["apple", "banana", "cherry", "apple", "banana"], $constant());
-    $this->assertEquals("cherry", $constant->index[2]);
+    $this->assertTrue(isset($constant[2]));
+    $this->assertEquals("cherry", $constant[2]);
     $this->assertEquals(1, $constant->index('banana'));
     $this->assertEquals(2, $constant->counts('apple'));
     $this->assertEquals(5, \count($constant));
+
+    $this->expectException(KeyError::class);
+    unset($constant[2]);
   }
 
   public function testForeachLen()
@@ -33,6 +37,9 @@ class TupleTest extends TestCase
     $this->assertEquals(['apple', 'banana', 'cherry'], $tuple);
     $this->assertEquals(3, $constant->len());
     $this->assertEquals($tuple, $constant());
+
+    $this->expectException(KeyError::class);
+    $constant[3] = 'banana';
   }
 
   public function testInIndexError()
@@ -50,7 +57,7 @@ class TupleTest extends TestCase
     $constant = new Tuple();
     $this->assertEquals([], $constant());
     $constant->del();
-    $this->expectException(KeyError::class);
+    $this->expectException(\Error::class);
     $constant();
   }
 

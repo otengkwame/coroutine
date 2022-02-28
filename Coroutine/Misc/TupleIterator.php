@@ -9,10 +9,10 @@ use Async\KeyError;
 /**
  * `TupleIterator` a `constant` element **array** of `items` that's _ordered_, _unchangeable_, and _allow_ duplicates.
  */
-interface TupleIterator extends \IteratorAggregate, \Countable
+interface TupleIterator extends \IteratorAggregate, \ArrayAccess, \Countable
 {
   /**
-   * Returns a _shadow_ copy `constant` _array_ of `Tuple` elements.
+   * Returns a _shadow_ copy `constant` __array__ of `Tuple` elements.
    *
    * @return array
    */

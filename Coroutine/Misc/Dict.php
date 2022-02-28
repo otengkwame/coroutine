@@ -8,13 +8,13 @@ use Async\KeyError;
 use Async\Misc\DictIterator;
 
 /**
- * An **associative** _array_ class that mimics Python's **Dict()** dictionary class, where as, `Dict` element **items**
+ * An **associative** _array_ class that mimics Python's **dict()** dictionary class, where as, `Dict` element **items**
  * are _ordered_, _changeable_, and _do not_ allow duplicates. A dictionary’s keys are almost arbitrary values.
  * Values that are not hash-able, that is, values containing lists, dictionaries or other mutable types may not be used as keys.
  *
- * - _Invoking_ a `$Dict();` instance will **return** a _shadow_ copy **associative** _array_ of `Dict` elements.
- * - _Adding/Updating_ a `key` by direct property `$Dict->key = $value;` same as `$Dict["key"] = $value;`
- * - _Getting_ a `$value` for a `key` by direct property `$Dict->key;` same as `$Dict["key"];`
+ * - _Invoking_ a `$Dict();` **instance** will **return** a _shadow_ copy **associative** _array_ of `Dict` elements.
+ * - _Adding_ or _Updating_ a `key` by direct **instance** `$Dict[key] = $value;` or direct property `$Dict->key = $value;`
+ * - _Getting_ a `$value` for a `key` by direct **instance** `$Dict[key];` or direct property `$Dict->key;`
  *
  * **Ordered**
  * - Dictionaries are ordered, means that the items have a defined order, and that order will not change.
@@ -31,11 +31,9 @@ use Async\Misc\DictIterator;
 final class Dict implements DictIterator
 {
   /**
-   * @var array[]
+   * @var array
    */
   protected $assoc = [];
-
-  protected $internal = false;
 
   /**
    * @param \Iterator|array $items
@@ -83,7 +81,7 @@ final class Dict implements DictIterator
     try {
       $this->assoc[$key] = $value;
     } catch (\Throwable $th) {
-      throw new KeyError('`' . $key . '` key is invalid!');
+      throw new KeyError('`' . $key . '` key invalid!');
     }
   }
 
@@ -93,7 +91,7 @@ final class Dict implements DictIterator
       return $this->assoc[$key];
     }
 
-    throw new KeyError('The `' . $key . '` key is not in dictionary!');
+    throw new KeyError('`' . $key . '` not in dictionary!');
   }
 
   public function get($key, $default = None)
@@ -198,12 +196,12 @@ final class Dict implements DictIterator
   public function del($key): void
   {
     if ($key instanceof $this) {
-      unset($this->assoc);
+      $this->__destruct();
     } elseif ($key instanceof DictIterator) {
       unset($key);
     } else {
       if ($this->not_in($key))
-        throw new KeyError("The {$key} key is not in the dictionary!");
+        throw new KeyError('`' . $key . '` not in dictionary!');
 
       unset($this->assoc[$key]);
     }
@@ -217,7 +215,7 @@ final class Dict implements DictIterator
   public function pop($key, $default = false)
   {
     if ($this->not_in($key) && $default === false)
-      throw new KeyError('The `' . $key . '`key is not in the dictionary!');
+      throw new KeyError('`' . $key . '` not in dictionary!');
 
     if ($this->in($key)) {
       $default = $this->assoc[$key];
@@ -234,5 +232,37 @@ final class Dict implements DictIterator
       throw new KeyError('The dictionary is empty!');
 
     return $item;
+  }
+
+  /**
+   * @codeCoverageIgnore
+   * @return bool
+   */
+  public function offsetExists($offset): bool
+  {
+    return isset($this->assoc[$offset]);
+  }
+
+  #[\ReturnTypeWillChange]
+  public function offsetGet($offset)
+  {
+    if (isset($this->assoc[$offset]))
+      return $this->assoc[$offset];
+
+    throw new KeyError('`' . $offset . '` not in `Dict!`');
+  }
+
+  public function offsetSet($offset, $value): void
+  {
+    $this->assoc[$offset] = $value;
+  }
+
+  /**
+   * @codeCoverageIgnore
+   * @return void
+   */
+  public function offsetUnset($offset): void
+  {
+    unset($this->assoc[$offset]);
   }
 }
