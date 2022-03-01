@@ -8,9 +8,9 @@
 
 include 'vendor/autoload.php';
 
-use Async\Queue;
+use Async\Misc\Queue;
 
-async('producer', function ($queue) {
+async('producer', function (Queue $queue) {
   foreach (range(1, 10) as $i) {
     yield $queue->put($i);
   }
@@ -19,7 +19,7 @@ async('producer', function ($queue) {
   print('Producer done' . EOL);
 });
 
-async('consumer', function ($queue) {
+async('consumer', function (Queue $queue) {
   while (true) {
     $item = yield $queue->get();
     print('Consumer got ' . $item . EOL);
@@ -29,11 +29,11 @@ async('consumer', function ($queue) {
 
 async('main', function () {
   $q = new Queue();
-  $prod_task = yield create_task('producer', $q); // Or yield await('spawn', 'producer', $q)
-  $cons_task = yield create_task('consumer', $q); // Or yield await('spawn', 'consumer', $q)
+  $prod_task = yield create_task(producer, $q); // Or yield await('spawn', producer, $q)
+  $cons_task = yield create_task(consumer, $q); // Or yield await('spawn', consumer, $q)
   yield join_task($prod_task);
   yield cancel_task($cons_task);
   yield shutdown();
 });
 
-\coroutine_run('main');
+\coroutine_run(main);

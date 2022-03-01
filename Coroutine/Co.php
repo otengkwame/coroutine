@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Async;
 
 use Fiber;
-use Async\Misc\Queue;
 use Async\Spawn\Globals;
 use Async\FiberInterface;
 
@@ -36,11 +35,6 @@ final class Co
    * @var Fiber[]|FiberInterface[]
    */
   protected static $fibers;
-
-  /**
-   * @var Queue[]
-   */
-  protected static $queues;
 
   /**
    * a task's starting and uniqueId numbers
@@ -121,29 +115,6 @@ final class Co
     self::$fibers[$tag] = null;
   }
 
-  public static function addQueue(string $tag, Queue $queue): void
-  {
-    if (self::isQueue($tag))
-      \panic("Queue named: '{$tag}' already exists!");
-
-    self::$queues[$tag] = $queue;
-  }
-
-  public static function isQueue(string $tag): bool
-  {
-    return isset(self::$queues[$tag]);
-  }
-
-  public static function getQueue(string $tag): ?Queue
-  {
-    return self::$queues[$tag];
-  }
-
-  public static function clearQueue(string $tag): void
-  {
-    self::$queues[$tag] = null;
-  }
-
   public static function addFunction(string $label, \Closure $coroutine): void
   {
     if (self::isFunction($label))
@@ -221,7 +192,6 @@ final class Co
     self::$timer = null;
     self::$parallel = null;
     self::$fibers = null;
-    self::$queues = null;
     self::$uniqueId = null;
   }
 }

@@ -51,7 +51,6 @@
             "Coroutine/Stream.php",
             "Coroutine/Worker.php",
             "Coroutine/Fibers.php",
-            "Coroutine/Queues.php",
             "Coroutine/Parallel/functional_api.php"
         ],
         "psr-4": {
