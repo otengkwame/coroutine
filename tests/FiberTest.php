@@ -2,7 +2,7 @@
 
 namespace Async\Tests;
 
-use function Async\Fibers\{creating_fiber, starting, resuming, suspending, throwing, fiberizing};
+use function Async\Fibers\{create_fiber, starting, resuming, suspending, throwing, fiber_return};
 
 use Async\Co;
 use Async\Fiber;
@@ -18,13 +18,13 @@ class FiberTest extends TestCase
 
     public function fiberArgs()
     {
-        creating_fiber('fi', function (int $x) {
+        create_fiber('fi', function (int $x) {
             return ($x + yield suspending($x));
         });
 
         yield starting('fi', 1);
         yield resuming('fi', 5);
-        $this->assertEquals(6, fiberizing('fi'));
+        $this->assertEquals(6, fiber_return('fi'));
     }
 
     public function testArgs()
@@ -34,7 +34,7 @@ class FiberTest extends TestCase
 
     public function fiberResume()
     {
-        creating_fiber('fi', function () {
+        create_fiber('fi', function () {
             $value = yield suspending(1);
             $this->assertEquals(2, $value);
         });
@@ -51,7 +51,7 @@ class FiberTest extends TestCase
 
     public function fiberCatch()
     {
-        creating_fiber('fi', function () {
+        create_fiber('fi', function () {
             try {
                 yield suspending('test');
             } catch (\Exception $exception) {
@@ -72,7 +72,7 @@ class FiberTest extends TestCase
 
     public function fiberGetReturn()
     {
-        creating_fiber('fi', function () {
+        create_fiber('fi', function () {
             $value = yield suspending(1);
             return $value;
         });
@@ -80,7 +80,7 @@ class FiberTest extends TestCase
         $value = yield starting('fi');
         $this->assertEquals(1, $value);
         $this->assertNull(yield resuming('fi', $value + 1));
-        $this->assertEquals(2, fiberizing('fi'));
+        $this->assertEquals(2, fiber_return('fi'));
     }
 
     public function testGetReturn()
@@ -90,7 +90,7 @@ class FiberTest extends TestCase
 
     public function fiberStatus()
     {
-        creating_fiber('fi', function () {
+        create_fiber('fi', function () {
             $fiber = Fiber::this();
             $this->assertTrue($fiber->isStarted());
             $this->assertTrue($fiber->isRunning());
@@ -148,9 +148,9 @@ class FiberTest extends TestCase
     public function taskCreatingFiberPanickingSame()
     {
         $this->expectException(Panicking::class);
-        creating_fiber('childTask', function ($av = null) {
+        create_fiber('childTask', function ($av = null) {
         });
-        creating_fiber('childTask', function ($av = null) {
+        create_fiber('childTask', function ($av = null) {
         });
 
         yield \shutdown();

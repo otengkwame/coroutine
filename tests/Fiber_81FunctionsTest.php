@@ -2,7 +2,7 @@
 
 namespace Async\Tests;
 
-use function Async\Fibers\{create_fiber, start_fiber, resume_fiber, suspend_fiber, throw_fiber, fiberize};
+use function Async\Fibers\{create_fiber, starting, resuming, suspending, throwing, fiber_return};
 
 use Async\Co;
 use Async\Panicking;
@@ -21,12 +21,12 @@ class Fiber_81FunctionsTest extends TestCase
     public function fiberArgs()
     {
         create_fiber('fi', function (int $x) {
-            return ($x + suspend_fiber($x));
+            return ($x + suspending($x));
         });
 
-        start_fiber('fi', 1);
-        resume_fiber('fi', 5);
-        $this->assertEquals(6, fiberize('fi'));
+        starting('fi', 1);
+        resuming('fi', 5);
+        $this->assertEquals(6, fiber_return('fi'));
     }
 
     public function testArgs()
@@ -37,13 +37,13 @@ class Fiber_81FunctionsTest extends TestCase
     public function fiberResume()
     {
         create_fiber('fi', function () {
-            $value = suspend_fiber(1);
+            $value = suspending(1);
             $this->assertEquals(2, $value);
         });
 
-        $value = start_fiber('fi');
+        $value = starting('fi');
         $this->assertEquals(1, $value);
-        resume_fiber('fi', $value + 1);
+        resuming('fi', $value + 1);
     }
 
     public function testResume()
@@ -55,16 +55,16 @@ class Fiber_81FunctionsTest extends TestCase
     {
         create_fiber('fi', function () {
             try {
-                suspend_fiber('test');
+                suspending('test');
             } catch (\Exception $exception) {
                 $this->assertEquals('test', $exception->getMessage());
             }
         });
 
-        $value = start_fiber('fi');
+        $value = starting('fi');
         $this->assertEquals('test', $value);
 
-        throw_fiber('fi', new \Exception('test'));
+        throwing('fi', new \Exception('test'));
     }
 
     public function testCatch()
@@ -75,14 +75,14 @@ class Fiber_81FunctionsTest extends TestCase
     public function fiberGetReturn()
     {
         create_fiber('fi', function () {
-            $value = suspend_fiber(1);
+            $value = suspending(1);
             return $value;
         });
 
-        $value = start_fiber('fi');
+        $value = starting('fi');
         $this->assertEquals(1, $value);
-        $this->assertNull(resume_fiber('fi', $value + 1));
-        $this->assertEquals(2, fiberize('fi'));
+        $this->assertNull(resuming('fi', $value + 1));
+        $this->assertEquals(2, fiber_return('fi'));
     }
 
     public function testGetReturn()
@@ -98,7 +98,7 @@ class Fiber_81FunctionsTest extends TestCase
             $this->assertTrue($fiber->isRunning());
             $this->assertFalse($fiber->isSuspended());
             $this->assertFalse($fiber->isTerminated());
-            suspend_fiber();
+            suspending();
         });
 
         $fiber = Co::getFiber('fi');
@@ -108,14 +108,14 @@ class Fiber_81FunctionsTest extends TestCase
         $this->assertFalse($fiber->isSuspended());
         $this->assertFalse($fiber->isTerminated());
 
-        start_fiber('fi');
+        starting('fi');
 
         $this->assertTrue($fiber->isStarted());
         $this->assertFalse($fiber->isRunning());
         $this->assertTrue($fiber->isSuspended());
         $this->assertFalse($fiber->isTerminated());
 
-        resume_fiber('fi');
+        resuming('fi');
 
         $this->assertTrue($fiber->isStarted());
         $this->assertFalse($fiber->isRunning());
