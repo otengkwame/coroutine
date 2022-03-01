@@ -13,6 +13,9 @@ class FiberTest extends TestCase
 {
     protected function setUp(): void
     {
+        if (((float) \phpversion() >= 8.1))
+            $this->markTestSkipped('For PHP 8.0 or less builtin Fibers.');
+
         \coroutine_clear();
     }
 
