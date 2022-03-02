@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Async\Misc;
+namespace Async\Di;
 
 use Async\ContainerException;
 use Psr\Container\ContainerInterface;

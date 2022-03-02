@@ -1,8 +1,8 @@
 <?php
 
-namespace Async\Tests\Misc;
+namespace Async\Tests\Di;
 
-use Async\Tests\Misc\DiInterface;
+use Async\Tests\Di\DiInterface;
 
 class Baz
 {

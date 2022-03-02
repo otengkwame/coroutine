@@ -5,6 +5,7 @@
     <testsuites>
         <testsuite name="Coroutine Test Suite">
             <directory suffix=".php">tests/</directory>
+            <directory suffix=".php">tests/di/</directory>
             <directory suffix=".php">tests/logger/</directory>
             <directory suffix=".php">tests/misc/</directory>
             <directory suffix=".phpt">tests/fiber/</directory>

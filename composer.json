@@ -56,8 +56,9 @@
         "psr-4": {
             "Async\\": [
                 "Coroutine/",
-                "Coroutine/Logger/",
+                "Coroutine/Di/",
                 "Coroutine/Misc/",
+                "Coroutine/Logger/",
                 "Coroutine/Exceptions/",
                 "Coroutine/Fiber/"
             ],
@@ -76,6 +77,9 @@
         "psr-4": {
             "Async\\Tests\\": [
                 "tests/"
+            ],
+            "Async\\Tests\\Di\\": [
+                "tests/di"
             ],
             "Async\\Tests\\Misc\\": [
                 "tests/misc"

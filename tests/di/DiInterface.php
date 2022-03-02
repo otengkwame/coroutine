@@ -1,6 +1,6 @@
 <?php
 
-namespace Async\Tests\Misc;
+namespace Async\Tests\Di;
 
 interface DiInterface
 {

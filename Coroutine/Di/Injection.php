@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Async\Misc;
+namespace Async\Di;
 
 use Async\ContainerException;
 use Async\NotFoundException;
-use Async\Misc\InjectionInterface;
+use Async\Di\InjectionInterface;
 
 /**
  * **Modified** Dependency Injection Container
