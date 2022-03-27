@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Async\Misc;
+namespace Async\Datatype;
 
 use Async\KeyError;
-use Async\Misc\DictIterator;
+use Async\Datatype\DictIterator;
 
 /**
  * An **associative** _array_ class that mimics Python's **dict()** dictionary class, where as, `Dict` element **items**
  * are _ordered_, _changeable_, and _do not_ allow duplicates. A dictionary’s keys are almost arbitrary values.
  * Values that are not hash-able, that is, values containing lists, dictionaries or other mutable types may not be used as keys.
  *
- * - _Invoking_ a `$Dict();` **instance** will **return** a _shadow_ copy **associative** _array_ of `Dict` elements.
- * - _Adding_ or _Updating_ a `key` by direct **instance** `$Dict[key] = $value;` or direct property `$Dict->key = $value;`
- * - _Getting_ a `$value` for a `key` by direct **instance** `$Dict[key];` or direct property `$Dict->key;`
+ * - _Invoking_ a `$dict();` **instance** returns a _shadow_ copy **associative** _array_ of `Dict` elements.
+ * - _Adding_ or _Updating_ a `key` by direct **instance** `$dict[key] = $value;` or direct property `$dict->key = $value;`
+ * - _Getting_ a `$value` for a `key` by direct **instance** `$dict[key];` or direct property `$dict->key;`
  *
  * **Ordered**
  * - Dictionaries are ordered, means that the items have a defined order, and that order will not change.

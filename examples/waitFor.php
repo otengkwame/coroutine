@@ -1,7 +1,7 @@
 <?php
 include 'vendor/autoload.php';
 
-use Async\Exceptions\TimeoutError;
+use Async\TimeoutError;
 
 function eternity()
 {

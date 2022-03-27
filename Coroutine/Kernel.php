@@ -614,32 +614,6 @@ final class Kernel
   }
 
   /**
-   * Add a file change event handler for the path being watched, that's continuously monitored.
-   * This function will return `int` immediately, use with `monitor()`, `monitor_file()`, `monitor_dir()`.
-   * - The `$handler` function will be executed every time theres activity with the path being watched.
-   * - Expect the `$handler` to receive `(?string $filename, int $events, int $status)`.
-   * - This function needs to be prefixed with `yield`
-   *
-   * @param callable $handler
-   *
-   * @return int
-   */
-  public static function monitorTask(callable $handler)
-  {
-    return Kernel::away(function () use ($handler) {
-      yield;
-      while (true) {
-        $fileChanged = yield;
-        if (\is_array($fileChanged) && (\count($fileChanged) == 3)) {
-          [$name, $event, $status] = $fileChanged;
-          $fileChanged = null;
-          yield $handler($name, $event, $status);
-        }
-      }
-    });
-  }
-
-  /**
    * Add a progress handler for the `future`, that's continuously monitored.
    * This function will return `int` immediately, use with `spawn_progress()`.
    * - The `$handler` function will be executed every time the `future` produces output.
@@ -1436,6 +1410,19 @@ final class Kernel
     $display = \strpos($label, '*', 1) !== false;
     $away = \strpos($label, '*', 0);
     $label = \str_replace(['*', ' '], '', $label);
+    $function = 'Async\Path\file_' . \str_replace(['file_', ' '], '', $label);
+    $file_function = 'Async\Path\file_' . $label;
+    if (\in_array($label, ['watch_dir', 'watch_task', 'watch', 'watch_file'], true)) {
+      $misc_function = 'Async\Path\\' . $label;
+      if (\is_callable($misc_function))
+        return yield $misc_function(...$arguments);
+    }
+
+    if (\is_callable($function))
+      return yield $function(...$arguments);
+    elseif (\is_callable($file_function))
+      return yield $file_function(...$arguments);
+
     if (\is_callable($label)) {
       // @codeCoverageIgnoreStart
       $system = function () use ($label, $arguments) {

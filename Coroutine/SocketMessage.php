@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace Async;
 
 /**
- * A simple generic class for handling/constructing **client/server**
- * messages, following the https://tools.ietf.org/html/rfc2616.html specs.
+ * A simple generic class for handling/constructing **client/server** socket messages,
+ * following the https://tools.ietf.org/html/rfc2616.html specs.
  *
- * This class works similar to `PSR-7`, not fully representing, usage is
- * for quick operations.
+ * This class works similar to `PSR-7`, not fully representing, usage is for quick operations.
  */
-class NetworkAssistant
+class SocketMessage
 {
   const AGENT = 'PHP Client';
   const SERVER = 'PHP Server';

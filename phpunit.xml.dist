@@ -8,9 +8,10 @@
             <directory suffix=".php">tests/di/</directory>
             <directory suffix=".php">tests/logger/</directory>
             <directory suffix=".php">tests/misc/</directory>
+            <directory suffix=".php">tests/network/</directory>
             <directory suffix=".phpt">tests/fiber/</directory>
-            <directory suffix=".phpt">tests/libuv/</directory>
             <directory suffix=".phpt">tests/parallel/</directory>
+            <directory suffix=".phpt">tests/libuv/</directory>
         </testsuite>
     </testsuites>
 

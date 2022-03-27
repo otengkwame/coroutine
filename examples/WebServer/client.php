@@ -9,7 +9,7 @@
 
 include 'vendor/autoload.php';
 
-use function Async\Stream\{
+use function Async\Socket\{
     net_client,
     net_read,
     net_write,

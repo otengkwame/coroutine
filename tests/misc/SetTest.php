@@ -3,7 +3,7 @@
 namespace Async\Tests;
 
 use Async\KeyError;
-use Async\Misc\Set;
+use Async\Datatype\Set;
 use PHPUnit\Framework\TestCase;
 
 class SetTest extends TestCase

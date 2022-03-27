@@ -13,6 +13,7 @@ use parallel\Runtime\Error\IllegalVariable;
 
 if (!\defined('STDIN')) {
   \define('STDIN', \fopen('php://stdin', 'r'));
+  \define('CO_STDIN', true);
 }
 
 if (!\defined('STDOUT')) {

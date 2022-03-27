@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Async\Misc;
+namespace Async\Datatype;
 
 use Async\KeyError;
 
@@ -40,6 +40,20 @@ interface ListsIterator extends \IteratorAggregate, \ArrayAccess, \Countable
    * @return bool
    */
   public function not_in($value): bool;
+
+  /**
+   * Returns the `item` with the lowest value.
+   *
+   * @return mixed
+   */
+  public function min();
+
+  /**
+   * Returns the `item` with the highest value.
+   *
+   * @return mixed
+   */
+  public function max();
 
   /**
    * Delete the `Lists` instance completely.

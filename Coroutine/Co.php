@@ -53,6 +53,31 @@ final class Co
    */
   protected static $setMode = false;
 
+  /**
+   * Flag to control `libuv` feature usage.
+   *
+   * @var bool
+   */
+  protected static $useUv = false;
+
+  public static function uvState($uv = 'toggle')
+  {
+    if ($uv === 'toggle')
+      self::$useUv = !self::$useUv;
+    elseif (\is_bool($uv))
+      self::$useUv = $uv;
+  }
+
+  /**
+   * Status to control general use of `libuv` features.
+   *
+   * @var bool
+   */
+  public static function uvNative(): bool
+  {
+    return self::$useUv;
+  }
+
   public static function setLoop(CoroutineInterface $loop): void
   {
     self::$instance = $loop;
@@ -190,8 +215,11 @@ final class Co
     Globals::reset();
     self::$instance = null;
     self::$timer = null;
+    $parallel = self::has('debugging') && Co::get('debugging') === true;
     self::$parallel = null;
+    self::$parallel['debugging'] = $parallel;
     self::$fibers = null;
     self::$uniqueId = null;
+    self::$useUv = false;
   }
 }

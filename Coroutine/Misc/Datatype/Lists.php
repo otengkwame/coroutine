@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Async\Misc;
+namespace Async\Datatype;
 
 use Async\KeyError;
-use Async\Misc\DictIterator;
-use Async\Misc\SetIterator;
-use Async\Misc\TupleIterator;
-use Async\Misc\ListsIterator;
+use Async\Datatype\DictIterator;
+use Async\Datatype\SetIterator;
+use Async\Datatype\TupleIterator;
+use Async\Datatype\ListsIterator;
 
 /**
  * An `simple` **array** class that mimics Python's **list()** class, where as, `Lists` element **items** are _ordered_,
  * _changeable_, and _allow_ duplicates. **Lists** are mutable sequences, typically used to store collections of homogeneous items.
  *
- * - _Invoking_ a `$Lists();` **instance** will **return** a _shadow_ copy `simple` **array** of `Lists` elements.
+ * - _Invoking_ a `$lists();` **instance** returns a _shadow_ copy `simple` **array** of `Lists` elements.
  * - _Adding_ or _Updating_ a _numbered_ `index` by direct **instance** `$Lists[number] = $value;`
  * - _Getting_ a `$value` for _numbered_ `index` by direct **instance** `$Lists[number];`
  *
@@ -114,6 +114,16 @@ final class Lists implements ListsIterator
   public function not_in($value): bool
   {
     return $this->in($value) === false;
+  }
+
+  public function min()
+  {
+    return \min($this->simple);
+  }
+
+  public function max()
+  {
+    return \max($this->simple);
   }
 
   public function index($value): int

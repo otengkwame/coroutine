@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Async\Misc;
+namespace Async\Datatype;
 
 use Async\KeyError;
-use Async\Misc\TupleIterator;
+use Async\Datatype\TupleIterator;
 
 /**
  * An `constant` **array** class that mimics Python's **tuple()** class, where as, `Tuple` element **items** are _ordered_,
  * _unchangeable_, and _allow_ duplicates. **Tuples** are immutable sequences, typically used to store collections of heterogeneous data.
  *
- * - _Invoking_ a `$Tuple();` **instance** will **return** a _shadow_ copy `constant` **array** of `Tuple` elements.
- * - _Getting_ a `$value` for a _numbered_ `index` by direct **instance** `$Tuple[number];`
+ * - _Invoking_ a `$tuple();` **instance** returns a _shadow_ copy `constant` **array** of `Tuple` elements.
+ * - _Getting_ a `$value` for a _numbered_ `index` by direct **instance** `$tuple[number];`
  *
  * **Ordered**
  * - When we say that tuples are ordered, it means that the items have a defined order, and that order will not change.

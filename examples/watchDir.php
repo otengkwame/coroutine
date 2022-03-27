@@ -2,7 +2,7 @@
 
 include 'vendor/autoload.php';
 
-use function Async\Path\{file_delete, monitor_task, monitor_dir};
+use function Async\Path\{file_delete, watch_task, watch_dir};
 
 function repeat()
 {
@@ -23,7 +23,7 @@ function main()
     yield \away(\repeat());
     echo "Watching directory";
 
-    $watchTask = yield monitor_task(function (?string $filename, int $events, int $status) {
+    $watchTask = yield watch_task(function (?string $filename, int $events, int $status) {
         if ($status == 0) {
             echo \EOL . "Change detected in 'watch/temp': ";
             if ($events & \UV::RENAME)
@@ -37,7 +37,7 @@ function main()
         }
     });
 
-    if (yield monitor_dir('watch/temp', $watchTask))
+    if (yield watch_dir('watch/temp', $watchTask))
         echo " '" . __DIR__ . "/watch/temp' ";
 
     echo "for changes." . \EOL;

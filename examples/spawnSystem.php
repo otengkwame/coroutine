@@ -2,7 +2,7 @@
 
 include 'vendor/autoload.php';
 
-use function Async\Path\{file_operation, file_touch, file_size, file_exist, file_unlink};
+use function Async\Path\{file_touch, file_size, file_exist, file_unlink};
 
 function repeat()
 {
@@ -16,7 +16,7 @@ function repeat()
 
 function main()
 {
-    file_operation();
+    uv_native(false);
     yield \away(\repeat());
 
     echo  \EOL . 'touch file' . \EOL;

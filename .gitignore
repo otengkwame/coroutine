@@ -8,4 +8,5 @@ vendor/
 *.crt
 *.pem
 *.csr
+*.local
 temp

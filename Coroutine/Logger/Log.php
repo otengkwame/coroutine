@@ -11,13 +11,18 @@ final class Log
   /**
    * @var LoggerInterface[]
    */
-  protected static $logs = [];
+  protected static $logs = null;
 
   /**
    * @var LoggerInterface
    */
   protected static $log = null;
 
+
+  public static function isLogging(): bool
+  {
+    return isset(self::$logs) || isset(self::$log);
+  }
 
   public static function setLog($key = null, LoggerInterface $value = null): void
   {

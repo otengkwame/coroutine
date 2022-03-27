@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Async;
 
-use function Async\Path\file_operation;
-use function Async\Stream\net_operation;
-
 use Async\Spawn\Future;
 use Async\Spawn\FutureHandler;
 use Async\Spawn\FutureInterface;
@@ -155,13 +152,6 @@ final class Coroutine implements CoroutineInterface
   protected $uvNetwork = 0;
 
   /**
-   * Status to control general use of `libuv` features.
-   *
-   * @var bool
-   */
-  protected $useUv = false;
-
-  /**
    * list of **UV** event handles, added by `addReader`, `addWriter`
    *
    * @var \UV[]
@@ -246,7 +236,6 @@ final class Coroutine implements CoroutineInterface
     $this->isHighTimer = null;
     $this->maxTaskId = 0;
     $this->uvFileSystem = 0;
-    $this->useUv = false;
     $this->taskMap = [];
     $this->completedMap = [];
     $this->taskGroupMap = null;
@@ -287,8 +276,7 @@ final class Coroutine implements CoroutineInterface
       Future::setChannelTick($channelLoop);
 
       \spawn_setup($this->uv);
-      file_operation(true);
-      net_operation(true, true);
+      \uv_native(true);
 
       $this->onEvent = function ($event, $status, $events, $stream) {
         if ($status !== 0) {
@@ -441,8 +429,6 @@ final class Coroutine implements CoroutineInterface
 
   public function setup(bool $useUvLoop = true): CoroutineInterface
   {
-    $this->useUv = $useUvLoop;
-
     if ($this->uv instanceof \UVLoop) {
       @\uv_stop($this->uv);
       @\uv_loop_delete($this->uv);
@@ -451,8 +437,7 @@ final class Coroutine implements CoroutineInterface
     $this->uv = ($useUvLoop && \IS_UV) ? \uv_loop_new() : null;
 
     \spawn_setup($this->uv, true, true, $useUvLoop);
-    file_operation($useUvLoop);
-    net_operation($useUvLoop, true);
+    \uv_native($useUvLoop);
 
     return $this;
   }
@@ -463,7 +448,7 @@ final class Coroutine implements CoroutineInterface
       return $this->uv;
 
     // @codeCoverageIgnoreStart
-    if ($this->useUv && !\IS_UV)
+    if (Co::uvNative() && !\IS_UV)
       throw new \RuntimeException('Calling method when "libuv" driver not loaded!');
 
     return null;

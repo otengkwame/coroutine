@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Async\Misc;
+namespace Async\Datatype;
 
 use Async\KeyError;
 

@@ -3,7 +3,7 @@
 namespace Async\Tests;
 
 use Async\KeyError;
-use Async\Misc\Tuple;
+use Async\Datatype\Tuple;
 use PHPUnit\Framework\TestCase;
 
 class TupleTest extends TestCase

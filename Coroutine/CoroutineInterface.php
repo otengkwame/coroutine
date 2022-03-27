@@ -384,7 +384,7 @@ interface CoroutineInterface
   /**
    * Is `libuv` features available and the system is **Linux**.
    *
-   * `Note:` Network related 'libuv` features are currently broken on **Windows**.
+   * `Note:` Network related `libuv` features are currently broken on **Windows**.
    *
    * @return bool
    */

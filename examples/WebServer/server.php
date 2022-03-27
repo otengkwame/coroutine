@@ -9,7 +9,7 @@
 include 'vendor/autoload.php';
 
 use function Async\Path\{file_open, file_contents, file_close};
-use function Async\Stream\{
+use function Async\socket\{
     messenger_for,
     net_accept,
     net_read,
@@ -115,7 +115,7 @@ function handleClient($socket)
 
             $input = '.' . $input;
 
-            $responser = messenger_for('response');
+            $responser = messenger_for(\RESPONSE);
             $fd = yield file_open($input);
             if (\is_resource($fd)) {
                 print "Serving $input\n";
@@ -127,7 +127,7 @@ function handleClient($socket)
                     yield file_close($fd);
                 }
 
-                $output = net_response($responser, $contents, 200);
+                $output = net_response($responser, $contents, 200, $mime);
             } else {
                 $output = net_response($responser, "The file you requested does not exist. Sorry!", 404);
             }

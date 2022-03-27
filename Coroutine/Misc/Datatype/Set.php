@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Async\Misc;
+namespace Async\Datatype;
 
 use Async\Co;
 use Async\KeyError;
-use Async\Misc\SetIterator;
+use Async\Datatype\SetIterator;
 
 /**
  * An `unique` **array** class that mimics Python's **set()** class, where as, `Set` element **items** are _unordered_,
  * _unchangeable_, and _do not_ allow duplicate values. **Sets** do not support indexing, slicing, or other sequence-like behavior.
  *
- * - _Invoking_ a `$Set();` instance will **return** a _shadow_ copy `unique` **array** of `Set` elements.
+ * - _Invoking_ a `$set();` **instance** returns a _shadow_ copy `unique` **array** of `Set` elements.
  *
  * **Unordered**
  * - Unordered means that the items in a set do not have a defined order.

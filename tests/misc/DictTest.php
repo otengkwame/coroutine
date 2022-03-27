@@ -3,7 +3,7 @@
 namespace Async\Tests;
 
 use Async\KeyError;
-use Async\Misc\Dict;
+use Async\Datatype\Dict;
 use PHPUnit\Framework\TestCase;
 
 class DictTest extends TestCase

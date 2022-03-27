@@ -3,8 +3,8 @@
 namespace Async\Tests;
 
 use Async\KeyError;
-use Async\Misc\Lists;
-use Async\Misc\Set;
+use Async\Datatype\Lists;
+use Async\Datatype\Set;
 use PHPUnit\Framework\TestCase;
 
 class ListsTest extends TestCase
@@ -20,11 +20,14 @@ class ListsTest extends TestCase
     $this->assertEquals(["apple", "banana", "cherry", "apple", "banana"], $simple());
     $this->assertTrue(isset($simple[2]));
     $this->assertEquals("cherry", $simple[2]);
+    $this->assertEquals("apple", $simple->min());
+    $this->assertEquals("cherry", $simple->max());
 
     $simple[2] = 'orange';
     $this->assertEquals("orange", $simple[2]);
     $this->assertEquals(1, $simple->index('banana'));
     $this->assertEquals(2, $simple->counts('apple'));
+    $this->assertEquals("orange", $simple->max());
 
     unset($simple[2]);
     $this->assertEquals(4, \count($simple));

@@ -46,9 +46,10 @@
     "autoload": {
         "files": [
             "Coroutine/Core.php",
+            "Coroutine/Internal.php",
             "Coroutine/Loggers.php",
             "Coroutine/Path.php",
-            "Coroutine/Stream.php",
+            "Coroutine/Socket.php",
             "Coroutine/Worker.php",
             "Coroutine/Fibers.php",
             "Coroutine/Parallel/functional_api.php"
@@ -58,12 +59,19 @@
                 "Coroutine/",
                 "Coroutine/Di/",
                 "Coroutine/Misc/",
+                "Coroutine/Misc/Network",
+                "Coroutine/Misc/Datatype",
                 "Coroutine/Logger/",
                 "Coroutine/Exceptions/",
                 "Coroutine/Fiber/"
             ],
             "parallel\\": [
-                "Coroutine/Parallel/"
+                "Coroutine/Parallel/",
+                "Coroutine/Parallel/Channel/Error/",
+                "Coroutine/Parallel/Future/",
+                "Coroutine/Parallel/Future/Error",
+                "Coroutine/Parallel/Future/Error/",
+                "Coroutine/Parallel/Runtime/Error/"
             ]
         }
     },
@@ -71,21 +79,13 @@
         "phpunit/phpunit": "^6 | ^7 | ^8"
     },
     "autoload-dev": {
-        "files": [
-            "tests/misc/functions.php"
-        ],
         "psr-4": {
             "Async\\Tests\\": [
-                "tests/"
-            ],
-            "Async\\Tests\\Di\\": [
-                "tests/di"
-            ],
-            "Async\\Tests\\Misc\\": [
-                "tests/misc"
-            ],
-            "Async\\examples\\": [
-                "examples/"
+                "tests/",
+                "tests/di/",
+                "tests/parallel/",
+                "examples/",
+                "examples/parallel/"
             ]
         }
     },

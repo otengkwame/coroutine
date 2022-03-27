@@ -3,7 +3,7 @@ include 'vendor/autoload.php';
 
 function childTask()
 {
-    $tid = yield \get_task();
+    $tid = yield \current_task();
     while (true) {
         echo "Child task $tid still alive!\n";
         yield;
@@ -12,7 +12,7 @@ function childTask()
 
 function parentTask()
 {
-    $tid = yield \get_task();
+    $tid = yield \current_task();
     $childTid = yield \away(\childTask());
 
     for ($i = 1; $i <= 6; ++$i) {

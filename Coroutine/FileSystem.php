@@ -9,6 +9,8 @@ use Async\TaskInterface;
 use Async\Coroutine;
 use Async\CoroutineInterface;
 
+use function Async\Worker\awaitable_future;
+
 /**
  * Executes a blocking system call asynchronously.
  *
@@ -46,7 +48,7 @@ final class FileSystem
       'request_fulluri' => false,
       'max_redirects' => 10,
       'ignore_errors' => true,
-      'timeout' => 2,
+      'timeout' => 1,
       'user_agent' => 'Symplely Coroutine',
       'headers' => [
         'Accept' => '*/*',
@@ -62,43 +64,36 @@ final class FileSystem
   ];
 
   /**
-   * Flag to control `UV` file operations.
-   *
-   * @var bool
-   */
-  protected static $useUV = true;
-
-  /**
    * Check for `libuv` and use for only file operations.
    *
    * @return bool
    */
   public static function isUv(): bool
   {
-    return \IS_UV && self::$useUV;
+    return \IS_UV && Co::uvNative();
   }
 
-  /**
-   * Setup how **Coroutine** handle file operations.
-   *
-   * @param bool $useUV
-   * - `true` on - will use `libuv` by **thread pool**.
-   * - `false` off - will use `uv_spawn` or PHP system `proc_open` by **child/subprocess**.
-   */
-  public static function setup(bool $useUV = true)
+  public static function internal($cli, ...$arguments)
   {
-    try {
-      self::$useUV = $useUV;
-    } catch (\Throwable $e) {
+    if (\is_callable($cli)) {
+      // @codeCoverageIgnoreStart
+      $system = function () use ($cli, $arguments) {
+        return @$cli(...$arguments);
+      };
+      // @codeCoverageIgnoreEnd
+
+      return yield awaitable_future(function () use ($system) {
+        return Kernel::addFuture($system);
+      });
     }
   }
 
   protected static function spawnStat($path, string $info = null)
   {
-    $result = yield \await('stat', $path);
+    $result = yield self::internal('stat', $path);
 
     try {
-      $result = empty($info) ?: $result[$info];
+      $result = empty($info) ? $result : $result[$info];
     } catch (\Throwable $e) {
       if ($info === 'size')
         $result = 0;
@@ -112,7 +107,7 @@ final class FileSystem
    */
   protected static function spawnLstat(string $path = '', ?string $info = null)
   {
-    $result = yield \await('lstat', $path);
+    $result = yield self::internal('lstat', $path);
 
     return empty($info) ? $result : $result[$info];
   }
@@ -153,7 +148,7 @@ final class FileSystem
       );
     }
 
-    return \await('rename', $from, $to);
+    return self::internal('rename', $from, $to);
   }
 
   /**
@@ -208,7 +203,7 @@ final class FileSystem
       );
     }
 
-    return \await('touch', $path, $time, $atime);
+    return self::internal('touch', $path, $time, $atime);
   }
 
   /**
@@ -236,7 +231,7 @@ final class FileSystem
       );
     }
 
-    return \await('unlink', $path);
+    return self::internal('unlink', $path);
   }
 
   /**
@@ -268,7 +263,7 @@ final class FileSystem
       );
     }
 
-    return \await('link', $from, $to);
+    return self::internal('link', $from, $to);
   }
 
   /**
@@ -300,7 +295,7 @@ final class FileSystem
       );
     }
 
-    return \await('symlink', $from, $to);
+    return self::internal('symlink', $from, $to);
   }
 
   /**
@@ -328,7 +323,7 @@ final class FileSystem
       );
     }
 
-    return \await('readlink', $path);
+    return self::internal('readlink', $path);
   }
 
   /**
@@ -359,7 +354,7 @@ final class FileSystem
       );
     }
 
-    return \await('mkdir', $path, $mode, $recursive);
+    return self::internal('mkdir', $path, $mode, $recursive);
   }
 
   /**
@@ -387,7 +382,7 @@ final class FileSystem
       );
     }
 
-    return \await('rmdir', $path);
+    return self::internal('rmdir', $path);
   }
 
   /**
@@ -419,7 +414,7 @@ final class FileSystem
       );
     }
 
-    return \await('chmod', $filename, $mode);
+    return self::internal('chmod', $filename, $mode);
   }
 
   /**
@@ -453,7 +448,7 @@ final class FileSystem
       );
     }
 
-    return \await('chown', $path, $uid);
+    return self::internal('chown', $path, $uid);
   }
 
   /**
@@ -576,6 +571,9 @@ final class FileSystem
         }
       );
     }
+
+    if (\IS_PHP81)
+      return \value(\fsync($fd));
   }
 
   /**
@@ -603,7 +601,10 @@ final class FileSystem
       );
     }
 
-    return \value(\fflush($fd));
+    if (\IS_PHP81)
+      return \value(\fdatasync($fd));
+    else
+      return \value(\fflush($fd));
   }
 
   /**
@@ -778,7 +779,7 @@ final class FileSystem
       return self::scandir($path, $flag);
     }
 
-    return \await('readdir', $path);
+    return self::internal('readdir', $path);
   }
 
   /**
@@ -808,7 +809,7 @@ final class FileSystem
       );
     }
 
-    return \await('scandir', $path, $flagSortingOrder);
+    return self::internal('scandir', $path, $flagSortingOrder);
   }
 
   /**
@@ -844,34 +845,59 @@ final class FileSystem
 
     $utime = empty($utime) ? \time() : $utime;
     $atime = empty($atime) ? \time() : $atime;
-    return \await('touch', $path, $utime, $atime);
+    return self::internal('touch', $path, $utime, $atime);
   }
 
   /**
-   * Monitor/watch the specified path for changes,
-   * switch to a `monitor_task()` by id to handle any changes.
-   * - The `monitor_task` will receive `(?string $filename, int $events, int $status)`.
+   * Add a file change event handler for the path being watched, that's continuously watched/monitored.
+   * This function will return `int` immediately, use with `watch()`, `watch_file()`, `watch_dir()`.
+   * - The `$handler` function will be executed every time theres activity with the path being watched.
+   * - Expect the `$handler` to receive `(?string $filename, int $events, int $status)`.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param callable $handler
+   *
+   * @return int
+   */
+  public static function watchTask(callable $handler)
+  {
+    return Kernel::away(function () use ($handler) {
+      yield;
+      while (true) {
+        $fileChanged = yield;
+        if (\is_array($fileChanged) && (\count($fileChanged) == 3)) {
+          [$name, $event, $status] = $fileChanged;
+          $fileChanged = null;
+          yield $handler($name, $event, $status);
+        }
+      }
+    });
+  }
+
+  /**
+   * Monitor/watch the specified path for changes, switch to a `watch_task()` by id to handle any changes.
+   * - The `watch_task` will receive `(?string $filename, int $events, int $status)`.
    * - This function needs to be prefixed with `yield`
    *
    * @param string $path
-   * @param integer $monitorTask
+   * @param integer $watchTask
    *
    * @return bool
    */
-  public static function monitor(string $path, int $monitorTask)
+  public static function watch(string $path, int $watchTask)
   {
     if (self::isUv()) {
       return new Kernel(
-        function (TaskInterface $task, CoroutineInterface $coroutine) use ($path, $monitorTask) {
+        function (TaskInterface $task, CoroutineInterface $coroutine) use ($path, $watchTask) {
           $fsEvent = null;
-          $changedTask = $coroutine->getTask($monitorTask);
+          $changedTask = $coroutine->getTask($watchTask);
           if ($changedTask instanceof TaskInterface) {
             $coroutine->fsAdd();
             $fsEvent = \uv_fs_event_init(
               $coroutine->getUV(),
               $path,
-              function ($rsc, $name, $event, $status) use ($monitorTask, $coroutine) {
-                $changedTask = $coroutine->getTask($monitorTask);
+              function ($rsc, $name, $event, $status) use ($watchTask, $coroutine) {
+                $changedTask = $coroutine->getTask($watchTask);
                 if ($changedTask instanceof TaskInterface) {
                   $changedTask->sendValue([$name, $event, $status]);
                   $coroutine->schedule($changedTask);
@@ -1012,7 +1038,7 @@ final class FileSystem
    * @param int $mode — this should be `S_IRWXU` and some mode flag, `libuv` only.
    * @param resource|array|null $contexts not for `libuv`.
    */
-  public static function open(string $path = null, string $flag = 'r', int $mode = \S_IRWXU, $contexts = null)
+  public static function open(string $path, string $flag = 'r', int $mode = \S_IRWXU, $contexts = null)
   {
     if (isset(self::$fileFlags[$flag])) {
       if (self::isUv() && (\strpos($path, '://') === false)) {

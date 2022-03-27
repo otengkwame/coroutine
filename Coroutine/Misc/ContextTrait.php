@@ -314,7 +314,7 @@ trait ContextTrait
     if ($this->withSet)
       $this->clearWith();
 
-    if (\is_resource($this->context))
+    if (\is_resource($this->context) && \get_resource_type($this->context) == 'stream')
       \fclose($this->context);
 
     if ($this->isObject)

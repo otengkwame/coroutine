@@ -2,21 +2,22 @@
 
 declare(strict_types=1);
 
-use Async\CancelledError;
+use Async\Co;
 use Async\Defer;
 use Async\Kernel;
 use Async\Channel;
-use Async\Co;
 use Async\Coroutine;
+use Async\CancelledError;
 use Async\CoroutineInterface;
 use Async\InvalidStateError;
-use Async\Misc\AsyncIterator;
+use Async\Log;
 use Async\Panic;
 use Async\Panicking;
 use Async\TaskInterface;
 use Async\Misc\TaskGroup;
-use Async\Misc\ContextInterface;
 use Async\Misc\Semaphore;
+use Async\Misc\AsyncIterator;
+use Async\Misc\ContextInterface;
 use Psr\Container\ContainerInterface;
 
 use function Async\Worker\awaitable_future;
@@ -42,9 +43,66 @@ if (!\function_exists('coroutine_run')) {
   }
 
   /**
-   * A construct to _return_ an **associative** `array`, a dictionary.
+   * Check for `async` logging system activation.
+   *
+   * @return boolean
    */
-  \define('kv', 'kv');
+  function is_logging(): bool
+  {
+    return Log::isLogging();
+  }
+
+  /**
+   * Turn `on/off` *system debugging* for source code __debugging_info()__ statement usage.
+   *
+   * @return void
+   */
+  function debugging(bool $onOff = false): void
+  {
+    CO::set('debugging', $onOff);
+  }
+
+  /**
+   * Check for Coroutine `debugging` activation.
+   *
+   * @return boolean
+   */
+  function is_debugging(): bool
+  {
+    return Co::has('debugging') && Co::get('debugging') === true;
+  }
+
+  /**
+   * Display `object/variable` or a `message` to console only, with additional system debugging info.
+   * - `debugging(true)` must be _called and set_ to show system debugging info of __task/coroutine__ _running_ `state/status`.
+   *
+   * @param mixed $objectMessage
+   * @param TaskInterface|null $task
+   * @param CoroutineInterface|null $coroutine
+   * @return void
+   */
+  function debugging_info($objectMessage = null, TaskInterface $task = null, CoroutineInterface $coroutine = null)
+  {
+    $isConsole = \IS_CLI && !\defined('CO_STDIN');
+    if ($isConsole && !empty($objectMessage))
+      \is_string($objectMessage) ? \printf('%s', $objectMessage) : \print_r($objectMessage);
+
+    if (\is_debugging() && $isConsole)
+      \var_dump($task, $coroutine);
+  }
+
+  /**
+   * _Toggle_ or turn _on/off_ how **Coroutine** handle network operations.
+   *
+   * @param bool|string $uv
+   * - `true` on - will use `libuv` features.
+   * - `false` off - will use `PHP` native builtin routines.
+   * @return void
+   */
+  function uv_native($uv = 'toggle')
+  {
+    Co::uvState($uv);
+  }
 
   /**
    * Returns a random float between two numbers.
@@ -848,11 +906,12 @@ if (!\function_exists('coroutine_run')) {
    */
   function shutdown(int $skipTask = 1)
   {
-    //if (\isLogger_active()) {
-    //  yield \logger_commit();
-    //  yield \logger_shutdown();
-    //}
-    return Kernel::shutdown($skipTask);
+    if (\is_logging()) {
+      yield \logger_commit();
+      yield \logger_shutdown();
+    }
+
+    return yield Kernel::shutdown($skipTask);
   }
 
   /**
@@ -909,41 +968,6 @@ if (!\function_exists('coroutine_run')) {
    * Wait on keyboard input.
    */
   \define('input_wait', 'input_wait');
-
-  /**
-   * Return the `string` of a variable type, or does a check, compared with string of the `type`.
-   * Types are: `callable`, `string`, `int`, `float`, `null`, `bool`, `array`, `scalar`,
-   * `object`, or `resource`
-   *
-   * @param mixed $variable
-   * @param string|null $type
-   * @return string|bool
-   */
-  function is_type($variable, string $type = null)
-  {
-    $checks = [
-      'is_callable' => 'callable',
-      'is_string' => 'string',
-      'is_integer' => 'int',
-      'is_float' => 'float',
-      'is_null' => 'null',
-      'is_bool' => 'bool',
-      'is_scalar' => 'scalar',
-      'is_array' => 'array',
-      'is_object' => 'object',
-      'is_resource' => 'resource',
-    ];
-
-    foreach ($checks as $func => $val) {
-      if ($func($variable)) {
-        return (empty($type)) ? $val : ($type == $val);
-      }
-    }
-
-    // @codeCoverageIgnoreStart
-    return 'unknown';
-    // @codeCoverageIgnoreEnd
-  }
 
   /**
    * Returns current `Coroutine` Loop **instance**.
