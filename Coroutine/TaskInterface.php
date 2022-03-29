@@ -245,7 +245,7 @@ interface TaskInterface
    * @param ContextInterface|null $context
    * @return self
    */
-  public function setWith(ContextInterface $context = null): self;
+  public function setWith(ContextInterface $context = null): TaskInterface;
 
   /**
    * Check for a `TaskGroup` task.
@@ -296,7 +296,7 @@ interface TaskInterface
    * @param int|\UVTimer|null $timer
    * @return self
    */
-  public function setTimer($timer = null): self;
+  public function setTimer($timer = null): TaskInterface;
 
   /**
    * Manually set the result for `result()` when called.

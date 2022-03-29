@@ -32,7 +32,7 @@ abstract class AbstractOptions implements OptionsInterface
     return $this->options;
   }
 
-  public function set_option(string $option_name, $value): self
+  public function set_option(string $option_name, $value): OptionsInterface
   {
     \stream_context_set_option($this->options, $this->type, $option_name, $value);
     return $this;

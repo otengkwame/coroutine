@@ -48,7 +48,7 @@ final class Set implements SetIterator
       if (isset($items[0]) && $items[0] instanceof \Traversable) {
         foreach ($items[0] as $value)
           $elements[] = $value;
-      } else {
+      } elseif (\count($items) > 0) {
         \array_push($elements, ...$items);
       }
 
@@ -144,7 +144,7 @@ final class Set implements SetIterator
     return $this->internal ? $current : \array_values($current);
   }
 
-  public function update(...$items): self
+  public function update(...$items): SetIterator
   {
     $this->internal = true;
     $elements = $this->union(...$items);
@@ -164,7 +164,7 @@ final class Set implements SetIterator
     return $this->internal ? $elements : \array_values($elements);
   }
 
-  public function intersection_update(...$items): self
+  public function intersection_update(...$items): SetIterator
   {
     $this->internal = true;
     $elements = $this->intersection(...$items);
@@ -184,7 +184,7 @@ final class Set implements SetIterator
     return $this->internal ? $elements : \array_values($elements);
   }
 
-  public function difference_update(...$items): self
+  public function difference_update(...$items): SetIterator
   {
     $this->internal = true;
     $elements = $this->difference(...$items);
@@ -207,7 +207,7 @@ final class Set implements SetIterator
     return $this->internal ? $elements : \array_values($elements);
   }
 
-  public function symmetric_difference_update(...$items): self
+  public function symmetric_difference_update(...$items): SetIterator
   {
     $this->internal = true;
     $elements = $this->symmetric_difference(...$items);

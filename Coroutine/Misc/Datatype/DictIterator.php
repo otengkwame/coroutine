@@ -63,7 +63,7 @@ interface DictIterator extends \IteratorAggregate, \ArrayAccess, \Countable
    * @param mixed $value Defaults to `None`.
    * @return DictIterator
    */
-  public static function fromKeys(iterable $iterable, $value = None): self;
+  public static function fromKeys(iterable $iterable, $value = None): DictIterator;
 
   /**
    * Returns a _shadow_ copy **associative** `array` of `Dict` elements.
@@ -96,7 +96,7 @@ interface DictIterator extends \IteratorAggregate, \ArrayAccess, \Countable
    * @param \Traversable|array $items
    * @return self
    */
-  public function update(...$items): self;
+  public function update(...$items): DictIterator;
 
   /**
    * Remove `key` from the `Dict`, or delete the `Dict` instance completely.

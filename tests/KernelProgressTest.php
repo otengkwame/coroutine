@@ -15,7 +15,7 @@ class KernelProgressTest extends TestCase
         if (\IS_MACOS)
             $this->markTestSkipped('Test skipped, broken on "MacOS".');
 
-        \coroutine_clear();
+        \coroutine_clear(false);
     }
 
     public function taskSpawnProgress()

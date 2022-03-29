@@ -23,7 +23,7 @@ interface OptionsInterface
    * @param mixed $value
    * @return self
    */
-  public function set_option(string $option_name, $value): self;
+  public function set_option(string $option_name, $value): OptionsInterface;
 
   /**
    * Return `array` of options set for `stream-context` resource.

@@ -89,7 +89,7 @@ interface SetIterator extends \IteratorAggregate, \Countable
    * @param \Traversable|array $items
    * @return self
    */
-  public function update(...$items): self;
+  public function update(...$items): SetIterator;
 
   /**
    * Return a new `items` __array__ with elements common to the `Set` and all `items`.
@@ -105,7 +105,7 @@ interface SetIterator extends \IteratorAggregate, \Countable
    * @param \Traversable|array $items
    * @return self
    */
-  public function intersection_update(...$items): self;
+  public function intersection_update(...$items): SetIterator;
 
   /**
    * Return a new `items` __array__ with elements in the `Set` that are not in the `items`.
@@ -121,7 +121,7 @@ interface SetIterator extends \IteratorAggregate, \Countable
    * @param \Traversable|array $items
    * @return self
    */
-  public function difference_update(...$items): self;
+  public function difference_update(...$items): SetIterator;
 
   /**
    * Return a new `items` __array__ with elements in either the `Set` or `items` but not both.
@@ -137,7 +137,7 @@ interface SetIterator extends \IteratorAggregate, \Countable
    * @param \Traversable|array $items
    * @return self
    */
-  public function symmetric_difference_update(...$items): self;
+  public function symmetric_difference_update(...$items): SetIterator;
 
   /**
    * Add element `item` to the `Set`.

@@ -53,7 +53,7 @@ final class Lists implements ListsIterator
       } elseif (isset($items[0]) && \is_array($items[0])) {
         foreach ($items as $value)
           $elements[] = $value;
-      } else {
+      } elseif (\count($items) > 0) {
         \array_push($elements, ...$items);
       }
     }

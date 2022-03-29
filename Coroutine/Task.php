@@ -340,7 +340,7 @@ final class Task implements TaskInterface
     return $this->withTask;
   }
 
-  public function setWith(ContextInterface $context = null): self
+  public function setWith(ContextInterface $context = null): TaskInterface
   {
     $this->withTask = $context;
 
@@ -352,7 +352,7 @@ final class Task implements TaskInterface
     return $this->timer;
   }
 
-  public function setTimer($timer = null): self
+  public function setTimer($timer = null): TaskInterface
   {
     $this->timer = $timer;
 

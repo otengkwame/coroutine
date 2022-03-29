@@ -53,6 +53,9 @@ class TestWorkers extends TestCase
 
   public function test_cpu()
   {
+    if ((float) \phpversion() < 7.3)
+      $this->markTestSkipped('Needs bug fixing for PHP 7.2 and less');
+
     $this->results = [];
 
     async('spin', function ($n) {

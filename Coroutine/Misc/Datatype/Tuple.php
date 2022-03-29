@@ -44,7 +44,7 @@ final class Tuple implements TupleIterator
       if (isset($items[0]) && $items[0] instanceof \Traversable) {
         foreach ($items[0] as $value)
           $elements[] = $value;
-      } else {
+      } elseif (\count($items) > 0) {
         try {
           \array_push($elements, ...((isset($items[0]) && \count($items) === 1) ? \str_split($items[0]) : $items));
           if (\count($elements) === 2 && empty($elements[1]))

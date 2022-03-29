@@ -152,7 +152,7 @@ class Sockets extends Context implements SocketsInterface
     $this->timeout = $timeout;
   }
 
-  public function create(int $domain = \AF_INET, int $type = \SOCK_STREAM, int $protocol = \SOL_TCP): self
+  public function create(int $domain = \AF_INET, int $type = \SOCK_STREAM, int $protocol = \SOL_TCP): SocketsInterface
   {
     $this->close();
     $socket = \socket_create($domain, $type, $protocol);

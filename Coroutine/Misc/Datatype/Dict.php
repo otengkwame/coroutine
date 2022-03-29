@@ -154,7 +154,7 @@ final class Dict implements DictIterator
     return \array_keys($this->assoc);
   }
 
-  public static function fromKeys(iterable $iterable, $value = None): self
+  public static function fromKeys(iterable $iterable, $value = None): DictIterator
   {
     $elements = [];
     if ($iterable instanceof DictIterator) {
@@ -184,7 +184,7 @@ final class Dict implements DictIterator
     return $this->assoc;
   }
 
-  public function update(...$items): self
+  public function update(...$items): DictIterator
   {
     $elements = $this->elements(...$items);
     if (\count($elements) > 0)
