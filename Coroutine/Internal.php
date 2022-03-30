@@ -3,9 +3,15 @@
 declare(strict_types=1);
 
 if (!\function_exists('array_key_first')) {
+  /**
+   * Gets the first key of an array
+   *
+   * @param array $arr
+   * @return string|int|null
+   */
   function array_key_first(array $arr)
   {
-    return \array_keys($arr)[0];
+    return \array_keys($arr)[0] ?? null;
   }
 }
 
