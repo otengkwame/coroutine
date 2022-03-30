@@ -522,10 +522,10 @@ final class Networks
    * @return \UVTcp|\UVUdp|\UVPipe|SocketsInterface
    */
   public static function server(
-    $uri = null,
-    OptionsInterface $context = null,
-    string $capath = None,
-    string $cafile = None,
+    $uri,
+    ?OptionsInterface $context = null,
+    ?string $capath = None,
+    ?string $cafile = None,
     array $caSelfDetails = []
   ) {
     [$parts, $uri, $ip,] = yield net_getaddrinfo((string)$uri);

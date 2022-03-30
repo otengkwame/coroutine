@@ -86,6 +86,9 @@
                 "tests/parallel/",
                 "examples/",
                 "examples/parallel/"
+            ],
+            "Async\\Tests\\Di\\": [
+                "tests/di/"
             ]
         }
     },

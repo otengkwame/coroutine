@@ -60,8 +60,7 @@ class Sockets extends Context implements SocketsInterface
     'ai_flags' => \AI_ADDRCONFIG | \AI_PASSIVE | \AI_CANONNAME,
     'ai_family' => \AF_INET,
     'ai_socktype' => \SOCK_STREAM,
-    'ai_protocol' => 0,
-    'ai_canonname' => ''
+    'ai_protocol' => 0
   ];
 
   /**

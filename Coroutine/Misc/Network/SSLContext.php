@@ -123,10 +123,10 @@ final class SSLContext extends AbstractOptions
    */
   public static function create_default_context(
     string $purpose,
-    string $name = None,
+    ?string $name = None,
     $context = [],
-    string $capath = None,
-    string $cafile = None,
+    ?string $capath = None,
+    ?string $cafile = None,
     array $caSelfDetails = []
   ) {
     $options = new self($context);

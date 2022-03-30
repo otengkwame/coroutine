@@ -253,7 +253,7 @@ class AwaitFileSystemTest extends TestCase
 
     $bool = yield await(rmdir, DIRECTORY_PATH);
     $this->assertTrue($bool);
-    $this->assertGreaterThanOrEqual(25, $this->counterResult);
+    $this->assertGreaterThanOrEqual(21, $this->counterResult);
 
     uv_native();
     $bool = yield await(touch, "./tmpNew");

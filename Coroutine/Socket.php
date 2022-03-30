@@ -88,10 +88,10 @@ if (!\function_exists('messenger_for')) {
    */
   function create_ssl_context(
     string $purpose,
-    string $name = None,
+    ?string $name = None,
     $context = [],
-    string $capath = None,
-    string $cafile = None,
+    ?string $capath = None,
+    ?string $cafile = None,
     array $caSelfDetails = []
   ) {
     return SSLContext::create_default_context($purpose, $name, $context, $capath, $cafile, $caSelfDetails);
@@ -189,8 +189,8 @@ if (!\function_exists('messenger_for')) {
     $handle,
     int $handlerTask,
     int $backlog = 0,
-    string $ssl_path = None,
-    string $ssl_file = None,
+    ?string $ssl_path = None,
+    ?string $ssl_file = None,
     $options = null,
     array $self_Details = []
   ) {
@@ -244,9 +244,9 @@ if (!\function_exists('messenger_for')) {
    */
   function net_server(
     $uri = null,
-    OptionsInterface $context = null,
-    string $capath = None,
-    string $cafile = None,
+    ?OptionsInterface $context = null,
+    ?string $capath = None,
+    ?string $cafile = None,
     array $caSelfDetails = []
   ) {
     // Let's ensure we have optimal performance.
