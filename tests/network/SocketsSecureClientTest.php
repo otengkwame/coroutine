@@ -27,7 +27,11 @@ class SocketsSecureClientTest extends TestCase
       $request = new SocketMessage('request', $hostname);
       $command = $request->request('get', $command);
     } else {
-      $this->assertTrue(\is_resource($client->getPeerCert()));
+      if (!\IS_PHP8)
+        $this->assertTrue(\is_resource($client->getPeerCert()));
+      else
+        $this->assertTrue(\is_object($client->getPeerCert()));
+
       $this->assertTrue($client->verifyPeerCert('facebook.com'));
     }
 

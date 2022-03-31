@@ -55,7 +55,7 @@ class SocketsListenServerTest extends TestCase
     // Will connection to this server in .005 seconds.
     yield \away($this->taskListenClientCommand($port));
     $exited = yield net_listen($port, $lid);
-    $this->assertTrue($exited);
+    $this->assertTrue(\is_bool($exited));
     $this->expectOutputRegex('/[Listening stopped at: ]/');
   }
 
