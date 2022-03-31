@@ -61,7 +61,7 @@ class SocketsListenServerTest extends TestCase
 
   public function testServerListen()
   {
-    \coroutine_run($this->taskServerListen((\IS_WINDOWS ? 9398 : 9298)));
+    \coroutine_run($this->taskServerListen((\IS_WINDOWS ? 9398 : 7290)));
   }
 
   public function taskFakeClientCommand($port)
