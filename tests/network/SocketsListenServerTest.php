@@ -47,6 +47,7 @@ class SocketsListenServerTest extends TestCase
       $this->assertTrue((\IS_WINDOWS || \IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
     } catch (\RuntimeException $e) {
       $this->assertRegExp('/[Failed to connect to: tcp:]/', $e->getMessage());
+      yield net_stop($this->taskId);
     }
   }
 
