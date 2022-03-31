@@ -102,6 +102,7 @@ if (\ZEND_THREAD_SAFE) {
         while ($counter) {
             echo "[queue] " . $counter;
             usleep(10000);
+            $counter++;
         }
     }, function () {
         echo "[finished]";
@@ -109,7 +110,7 @@ if (\ZEND_THREAD_SAFE) {
 
     while (true) {
         echo 'Waiting... ';
-        if ($counter == 100) {
+        if ($counter > 100) {
             echo 'finish';
             uv_close($async, function (UV $handle) {
                 print ' with first';

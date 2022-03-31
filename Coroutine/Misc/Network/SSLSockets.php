@@ -126,15 +126,28 @@ final class SSLSockets extends Sockets
 
   protected function assertOpenSSLx509($resource)
   {
-    if (!\is_resource($resource)) {
-      throw new \InvalidArgumentException(\sprintf('Resource expected, got "%s"', \gettype($resource)));
-    }
+    if (!\IS_PHP8) {
+      if (!\is_resource($resource)) {
+        throw new \InvalidArgumentException(\sprintf('Resource expected, got "%s"', \gettype($resource)));
+      }
 
-    if (\get_resource_type($resource) !== 'OpenSSL X.509') {
-      throw new \InvalidArgumentException(\sprintf(
-        'Resource of type "OpenSSL X.509" expected, got "%s"',
-        \get_resource_type($resource)
-      ));
+      if (\get_resource_type($resource) !== 'OpenSSL X.509') {
+        throw new \InvalidArgumentException(\sprintf(
+          'Resource of type "OpenSSL X.509" expected, got "%s"',
+          \get_resource_type($resource)
+        ));
+      }
+    } else {
+      if (!\is_object($resource)) {
+        throw new \InvalidArgumentException(\sprintf('Object expected, got "%s"', \gettype($resource)));
+      }
+
+      if (!$resource instanceof \OpenSSLCertificate) {
+        throw new \InvalidArgumentException(\sprintf(
+          'Object of type "OpenSSLCertificate" expected, got "%s"',
+          \gettype($resource)
+        ));
+      }
     }
   }
 }

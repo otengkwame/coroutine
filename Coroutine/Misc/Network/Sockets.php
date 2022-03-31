@@ -118,7 +118,11 @@ class Sockets extends Context implements SocketsInterface
    */
   public function __construct($socket = None, $timeout = 1)
   {
-    if (\get_resource_type($socket) === 'stream') {
+    $isSocketOrStream = (!\IS_PHP8)
+      ? \get_resource_type($socket)
+      : ($socket instanceof \Socket ? 'Socket' : \get_resource_type($socket));
+
+    if ($isSocketOrStream === 'stream') {
       $stream = \socket_import_stream($socket);
       if ($stream === false)
         $this->error();
@@ -132,7 +136,7 @@ class Sockets extends Context implements SocketsInterface
       \stream_set_blocking($this->stream, false);
       if (\stream_is_local($socket))
         $this->fileno = $socket;
-    } elseif (\get_resource_type($socket) === 'Socket') {
+    } elseif ($isSocketOrStream === 'Socket') {
       \socket_set_nonblock($socket);
       $this->socket = $socket;
       $stream = \socket_export_stream($socket);

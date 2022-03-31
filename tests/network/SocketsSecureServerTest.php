@@ -58,7 +58,7 @@ class SocketsSecureServerTest extends TestCase
       $this->assertFalse($client instanceof SSLSockets);
       yield net_close($client);
     } catch (\RuntimeException $th) {
-      $this->assertEquals('Failed to enable socket encryption: stream_socket_enable_crypto(): SSL: An existing connection was forcibly closed by the remote host.' . \CRLF, $th->getMessage());
+      $this->assertRegExp('/[Failed to enable socket encryption: stream_socket_enable_crypto(): SSL: ]/', $th->getMessage());
     }
   }
 
