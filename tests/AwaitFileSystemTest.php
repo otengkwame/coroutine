@@ -241,19 +241,19 @@ class AwaitFileSystemTest extends TestCase
 
     $bool = yield await(rename, "./tmpTouch", "./tmpRename");
     $this->assertTrue($bool);
-    $this->assertGreaterThanOrEqual(10, $this->counterResult);
+    $this->assertGreaterThanOrEqual(8, $this->counterResult);
 
     $bool = yield await(unlink, "./tmpRename");
     $this->assertTrue($bool);
-    $this->assertGreaterThanOrEqual(13, $this->counterResult);
+    $this->assertGreaterThanOrEqual(9, $this->counterResult);
 
     $bool = yield await(mkdir, DIRECTORY_PATH);
     $this->assertTrue($bool);
-    $this->assertGreaterThanOrEqual(16, $this->counterResult);
+    $this->assertGreaterThanOrEqual(10, $this->counterResult);
 
     $bool = yield await(rmdir, DIRECTORY_PATH);
     $this->assertTrue($bool);
-    $this->assertGreaterThanOrEqual(18, $this->counterResult);
+    $this->assertGreaterThanOrEqual(11, $this->counterResult);
 
     uv_native();
     $bool = yield await(touch, "./tmpNew");
