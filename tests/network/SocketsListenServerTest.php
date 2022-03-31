@@ -42,8 +42,12 @@ class SocketsListenServerTest extends TestCase
   {
     yield \sleep_for(.005);
     #Connect to Server
-    $client = yield net_client($port);
-    $this->assertTrue((\IS_WINDOWS || \IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
+    try {
+      $client = yield net_client($port);
+      $this->assertTrue((\IS_WINDOWS || \IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
+    } catch (\RuntimeException $e) {
+      $this->assertRegExp('/[Failed to connect to: tcp:]/', $e->getMessage());
+    }
   }
 
   public function taskServerListen($port)
