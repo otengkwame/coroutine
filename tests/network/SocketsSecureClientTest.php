@@ -15,25 +15,20 @@ class SocketsSecureClientTest extends TestCase
     \coroutine_clear();
   }
 
-  public function taskClient($hostname, $port = 80, $command = '/')
+  public function taskClient($hostname, $port, $command = '/')
   {
     $contextOptions = yield create_ssl_context(\CLIENT_AUTH);
     #Connect to Server
     #Start SSL
-    $client = yield net_client("$hostname:$port", (\IS_WINDOWS || !\IS_PHP8 ? $contextOptions : null));
-    $this->assertTrue((\IS_WINDOWS || !\IS_PHP8 ? $client instanceof SSLSockets : $client instanceof \UV));
+    $client = yield net_client("$hostname:$port", $contextOptions);
+    $this->assertTrue($client instanceof SSLSockets);
 
-    if ($client instanceof \UV) {
-      $request = new SocketMessage('request', $hostname);
-      $command = $request->request('get', $command);
-    } else {
-      if (!\IS_PHP8)
-        $this->assertTrue(\is_resource($client->getPeerCert()));
-      else
-        $this->assertTrue(\is_object($client->getPeerCert()));
+    if (!\IS_PHP8)
+      $this->assertTrue(\is_resource($client->getPeerCert()));
+    else
+      $this->assertTrue(\is_object($client->getPeerCert()));
 
-      $this->assertTrue($client->verifyPeerCert('facebook.com'));
-    }
+    $this->assertTrue($client->verifyPeerCert('facebook.com'));
 
     #Send a command
     $written = yield net_write($client, $command);
@@ -45,16 +40,6 @@ class SocketsSecureClientTest extends TestCase
     #Receive response from server. Loop until the response is finished
     $response = yield net_read($client);
     $this->assertEquals('string', \is_type($response));
-
-    if ($client instanceof \UV) {
-      $request->parse($response);
-      $this->assertEquals('array', \is_type($request->getHeader('all')));
-      $this->assertEquals('array', \is_type($request->getParameter('all')));
-      $this->assertEquals('string', \is_type($request->getProtocol()));
-      $this->assertEquals('int', \is_type($request->getCode()));
-      $this->assertEquals('string', \is_type($request->getMessage()));
-      $this->assertEquals('string', \is_type($request->getUri()));
-    }
 
     #close connection
     yield net_close($client);
