@@ -20,8 +20,8 @@ class SocketsSecureClientTest extends TestCase
     $contextOptions = yield create_ssl_context(\CLIENT_AUTH);
     #Connect to Server
     #Start SSL
-    $client = yield net_client("$hostname:$port", (\IS_WINDOWS || \IS_PHP8 ? $contextOptions : null));
-    $this->assertTrue((\IS_WINDOWS || \IS_PHP8 ? $client instanceof SSLSockets : $client instanceof \UV));
+    $client = yield net_client("$hostname:$port", (\IS_WINDOWS || !\IS_PHP8 ? $contextOptions : null));
+    $this->assertTrue((\IS_WINDOWS || !\IS_PHP8 ? $client instanceof SSLSockets : $client instanceof \UV));
 
     if ($client instanceof \UV) {
       $request = new SocketMessage('request', $hostname);

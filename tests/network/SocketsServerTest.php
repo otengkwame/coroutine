@@ -60,7 +60,8 @@ class SocketsServerTest extends TestCase
     $client = yield net_client($port);
     #Send a command
     $wrote = yield net_write($client, 'hi');
-    $this->assertEquals(2, $wrote);
+    if (!$client instanceof \UV)
+      $this->assertEquals(2, $wrote);
 
     #Receive response from server. Loop until the response is finished
     $response = yield net_read($client);
