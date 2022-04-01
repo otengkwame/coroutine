@@ -356,13 +356,14 @@ final class Networks
       return yield new Kernel(
         function (TaskInterface $task, CoroutineInterface $coroutine) use ($handle, $data) {
           if (!\uv_is_closing($handle)) {
+            $size = \strlen($data);
             $coroutine->ioAdd();
             \uv_write(
               $handle,
               $data,
-              function ($handle, $status) use ($task, $coroutine) {
+              function ($handle, $status) use ($task, $coroutine, $size) {
                 $coroutine->ioRemove();
-                $task->sendValue($status);
+                $task->sendValue(($status === 0 ? $size : $status));
                 $coroutine->schedule($task);
               }
             );
