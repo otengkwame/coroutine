@@ -8,7 +8,7 @@ if (((float) \phpversion() >= 8.0)) print "skip"; ?>
 include 'vendor/autoload.php';
 use \parallel\Channel;
 
-$channel = Channel::make("buffer", Channel::Infinite);
+$channel = Channel::make("buffer", 1);
 
 try {
     $channel->send(new DateTime);

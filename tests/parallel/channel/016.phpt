@@ -28,7 +28,7 @@ object(parallel\Channel)#%d (%d) {
   ["capacity":protected]=>
   int(-1)
   ["type":protected]=>
-  string(8) "buffered"
+  string(10) "unbuffered"
   ["buffered":protected]=>
   object(SplQueue)#%d (2) {
     ["flags":"SplDoublyLinkedList":private]=>

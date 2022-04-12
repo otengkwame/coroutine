@@ -23,16 +23,6 @@ use Psr\Container\ContainerInterface;
 use function Async\Worker\awaitable_future;
 
 if (!\function_exists('coroutine_run')) {
-
-  if (!\defined('None'))
-    \define('None', null);
-
-  if (!\defined('IS_PHP81'))
-    \define('IS_PHP81', ((float) \phpversion() >= 8.1));
-
-  if (!\defined('IS_ZTS'))
-    \define('IS_ZTS', \ZEND_THREAD_SAFE);
-
   /**
    * A construct to _return_ an **associative** `array`, a dictionary.
    *

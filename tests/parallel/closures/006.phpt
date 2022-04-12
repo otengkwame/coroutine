@@ -6,7 +6,7 @@ Check closures no nested declarations
 <?php
 include 'vendor/autoload.php';
 $runtime = new \parallel\Runtime;
-$channel = \parallel\Channel::make("channel", \parallel\Channel::Infinite);
+$channel = \parallel\Channel::make("channel", 1);
 
 try {
     $channel->send(function(){
