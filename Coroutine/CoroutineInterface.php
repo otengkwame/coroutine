@@ -8,6 +8,7 @@ use Async\FiberInterface;
 use Async\Spawn\Channeled;
 use Async\Spawn\FutureInterface;
 use Async\RuntimeException;
+use Async\Spawn\Thread;
 
 interface CoroutineInterface
 {
@@ -294,6 +295,20 @@ interface CoroutineInterface
   public function addFuture($callable, int $timeout = 0, bool $display = false, $channel = null): FutureInterface;
 
   /**
+   * This will cause a _new thread_ to be **created** and **spawned** for the associated `Thread` object,
+   * where its _internal_ task `queue` will begin to be processed.
+   * - Add callable for parallel processing, in an separate `thread`
+   *
+   * @see https://docs.python.org/3.10/library/threading.html#module-threading
+   *
+   * @param string|int $tid Thread ID
+   * @param callable $callable
+   * @param mixed ...$args
+   * @return Thread
+   */
+  public function addThread(int $tid, callable $callable, ...$args): Thread;
+
+  /**
    * There are no **UV** file system operations/events pending.
    *
    * @return bool
@@ -382,6 +397,13 @@ interface CoroutineInterface
   public function getParallel(): ParallelInterface;
 
   /**
+   * The `Thread` class instance.
+   *
+   * @return Thread
+   */
+  public function getThread(): Thread;
+
+  /**
    * Is `libuv` features available and the system is **Linux**.
    *
    * `Note:` Network related `libuv` features are currently broken on **Windows**.
@@ -400,11 +422,11 @@ interface CoroutineInterface
   /**
    * Run all `tasks` in the queue.
    *
-   * If there are none, no I/O, or timers the script/application will exit immediately.
+   * If there are none, no I/O, timers or etc... the script/application will exit immediately.
    *
    * @internal
    *
-   * @param bool $isReturn - should return to caller after one loop tick, this set by `gather()`
+   * @param bool $isReturn - a conditional return or a flag for additional processing after one loop tick.
    */
   public function execute($isReturn = false);
 

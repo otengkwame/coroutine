@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Async;
 
-use Async\Spawn\Channeled;
-use Async\Spawn\FutureInterface;
 use Async\Channel;
 use Async\CoroutineInterface;
 use Async\TaskInterface;
@@ -23,6 +21,9 @@ use Async\Misc\Contextify;
 use Async\Misc\ContextInterface;
 use Async\Misc\Semaphore;
 use Async\Misc\TimeoutAfter;
+use Async\Spawn\Thread;
+use Async\Spawn\Channeled;
+use Async\Spawn\FutureInterface;
 use Psr\Container\ContainerInterface;
 
 use function Async\Worker\awaitable_future;
@@ -123,7 +124,8 @@ final class Kernel
   }
 
   /**
-   * Set current Task context type, currently either `paralleled`, `async`, `awaited`, `stateless`, or `monitored`.
+   * Set current Task context type, currently either `paralleled`, `async`, `async_method`, `threaded`, `awaited`,
+   * `stateless`, or `monitored`.
    * Will return the current task ID.
    *
    * - This function needs to be prefixed with `yield`
@@ -271,13 +273,17 @@ final class Kernel
             $coroutine->schedule($unjoined);
           }
 
-          $error = ($isContext || $type) ? new TaskCancelled("Task {$tid}!") :  new CancelledError("Task {$tid}!");
+          $error = ($isContext || $type) ? new TaskCancelled("Task {$tid}!") : new CancelledError("Task {$tid}!");
           $customData = $cancelTask->getCustomData();
-          if ($customData instanceof FutureInterface) {
-            $customData->stop();
-            $cancelTask->setCaller($task);
-            $cancelTask->setException($error);
+          if ($customData instanceof FutureInterface || $customData instanceof Thread) {
             $task->sendValue(true);
+            $cancelTask->setCaller($task);
+            if ($customData instanceof FutureInterface) {
+              $customData->stop();
+              $cancelTask->setException($error);
+            } else
+              $customData->cancel($tid);
+
             return $coroutine->schedule($task);
           }
 
@@ -325,6 +331,12 @@ final class Kernel
           if ($join->exception()) {
             $task->setException($join->exception());
             return $coroutine->schedule($task);
+          }
+
+          $customData = $join->getCustomData();
+          if ($customData instanceof Thread) {
+            $coroutine->schedule($join);
+            return $customData->join($tid);
           }
 
           $coroutine->schedule($join);
@@ -501,6 +513,58 @@ final class Kernel
             }
           });
         }
+      }
+    );
+  }
+
+  /**
+   * Add and wait for result of an separate `thread` of execution.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @see https://docs.python.org/3.10/library/threading.html#module-threading
+   *
+   * @param callable $function
+   * @param mixed $args
+   *
+   * @return mixed
+   */
+  public static function addThread(callable $function, ...$args)
+  {
+    return new Kernel(
+      function (TaskInterface $task, CoroutineInterface $coroutine)
+      use ($function, $args) {
+        $task->taskType('threaded');
+        $task->setState('process');
+        $thread = $coroutine->addThread($task->taskId(), $function, ...$args)
+          ->then(function ($result) use ($task, $coroutine) {
+            $task->setState('completed');
+            $task->sendValue($result);
+            $coroutine->schedule($task);
+          })->catch(function (\Throwable $error) use ($task, $coroutine) {
+            $message = $error->getMessage();
+            $isCancelled = \strpos($message, 'cancelled!') !== false;
+            $task->setState($isCancelled ? 'cancelled' : 'erred');
+            if ($isCancelled) {
+              if ($task->hasCaller()) {
+                $cancel = $task->getCaller();
+                $cancel->setCaller();
+                if ($cancel->getTimer() || $task->getTimer())
+                  $cancel->setException(new TaskTimeout(0.0));
+                else
+                  $cancel->setException(new TaskCancelled($message));
+
+                return $coroutine->schedule($cancel);
+              } else {
+                $task->setException(new TaskCancelled($message));
+              }
+            } else {
+              $task->setException($error);
+            }
+
+            $coroutine->schedule($task);
+          });
+
+        $task->customData($thread);
       }
     );
   }
@@ -1092,7 +1156,7 @@ final class Kernel
         if ($callable instanceof \Generator) {
           $taskId = $coroutine->createTask($callable);
         } elseif (\is_callable($callable)) {
-          if ($callable === \run_in_process)
+          if ($callable === \run_in_process || $callable === \run_in_thread)
             $skip = true;
 
           $taskId = $coroutine->createTask(\awaitAble($callable, ...$args));
@@ -1103,16 +1167,23 @@ final class Kernel
           $task->setTimer();
           $callableTask = $coroutine->getTask($taskId);
           if (!$coroutine->isCompleted($taskId)) {
-            $future = $callableTask->getCustomData();
-            if ($future instanceof FutureInterface) {
-              $future->stop(\SIGKILL);
+            $futureThread = $callableTask->getCustomData();
+            if ($futureThread instanceof FutureInterface || $futureThread instanceof Thread) {
               $callableTask->setCaller($task);
+              if ($futureThread instanceof FutureInterface) {
+                $delay = 1;
+                $futureThread->stop(\SIGKILL);
+              } else {
+                $delay = 2;
+                $futureThread->cancel($taskId);
+              }
+
               $canceled = function () use ($task, $timeout, $coroutine) {
                 $task->setException(new TaskTimeout($timeout));
                 $coroutine->schedule($task);
               };
 
-              return $coroutine->createTask(\delayer(1, $canceled));
+              return $coroutine->createTask(\delayer($delay, $canceled));
             } else {
               $coroutine->schedule($callableTask);
               $coroutine->createTask(\delayer(2, [$coroutine, 'cancelTask'], $taskId));
@@ -1318,42 +1389,7 @@ final class Kernel
 
         $result = yield $async;
       } catch (\Throwable $error) {
-        yield;
-        $task = $coroutine->getTask(yield \current_task());
-        $task->setState(
-          ($error instanceof CancelledError ? 'cancelled' : 'erred')
-        );
-
-        $context = $task->getWith();
-        $parent = \get_parent_class($error);
-        $isParentError = $parent === false || \strpos($parent, 'Async\\') !== false || $parent === 'Exception';
-        if ($task->hasCaller()) {
-          $unjoined = $task->getCaller();
-          if (!$isParentError)
-            $error = new \Error($error->getMessage(), $error->getCode(), $error->getPrevious());
-
-          $unjoined->setException($error);
-          $coroutine->schedule($unjoined);
-        } elseif (($context instanceof ContextInterface && $context->isWith() && $context->withTask() === $task) || $task->hasGroup()) {
-          /** @var TaskGroup|ContextInterface */
-          $instance = $task->hasGroup() ? $task->getGroup() : $context;
-          try {
-            yield $instance->__exit($error);
-          } catch (\Throwable $e) {
-          }
-
-          if ($task->hasGroup())
-            $instance->task_done($task, true, $error);
-        }
-
-        if ($task->isSelfCancellation()) {
-          $task->setException($error);
-          return yield yield $coroutine->schedule($task);
-        } else {
-          $task->setException($error);
-        }
-
-        return $coroutine->schedule($task);
+        return yield self::throwable($error, $coroutine);
       }
 
       $task = $coroutine->getTask(yield \current_task());
@@ -1364,6 +1400,46 @@ final class Kernel
     };
 
     Co::addFunction($label, $closure);
+  }
+
+  protected static function throwable(\Throwable $error, CoroutineInterface $coroutine)
+  {
+    yield;
+    $task = $coroutine->getTask(yield \current_task());
+    $task->setState(
+      ($error instanceof CancelledError ? 'cancelled' : 'erred')
+    );
+
+    $context = $task->getWith();
+    $parent = \get_parent_class($error);
+    $isParentError = $parent === false || \strpos($parent, 'Async\\') !== false || $parent === 'Exception';
+    if ($task->hasCaller()) {
+      $unjoined = $task->getCaller();
+      if (!$isParentError)
+        $error = new \Error($error->getMessage(), $error->getCode(), $error->getPrevious());
+
+      $unjoined->setException($error);
+      $coroutine->schedule($unjoined);
+    } elseif (($context instanceof ContextInterface && $context->isWith() && $context->withTask() === $task) || $task->hasGroup()) {
+      /** @var TaskGroup|ContextInterface */
+      $instance = $task->hasGroup() ? $task->getGroup() : $context;
+      try {
+        yield $instance->__exit($error);
+      } catch (\Throwable $e) {
+      }
+
+      if ($task->hasGroup())
+        $instance->task_done($task, true, $error);
+    }
+
+    if ($task->isSelfCancellation()) {
+      $task->setException($error);
+      return yield yield $coroutine->schedule($task);
+    } else {
+      $task->setException($error);
+    }
+
+    return $coroutine->schedule($task);
   }
 
   /**

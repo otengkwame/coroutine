@@ -142,7 +142,6 @@ if (!\function_exists('awaitable_future')) {
     return Kernel::spawnTask($command, $timeout, $display, $channel, $channelTask, 0, null);
   }
 
-
   /**
    * Add and wait for result of an blocking `I/O` `future` that runs in parallel.
    * - This function needs to be prefixed with `yield`
@@ -184,8 +183,8 @@ if (!\function_exists('awaitable_future')) {
 
   /**
    * Add and wait for result of an blocking `I/O` future that runs in parallel.
-   * This function turns the calling function internal __state/type__ used by `gather()`
-   * to **process/paralleled** which is handled differently.
+   * This function turns the calling function internal __state/type__ to **process/paralleled** that's handled
+   * differently when used by `gather()`.
    *
    * - This function needs to be prefixed with `yield`
    *
@@ -215,11 +214,48 @@ if (!\function_exists('awaitable_future')) {
   }
 
   /**
-   * Wrap the a spawn `future` with `yield`, this insure the execution
-   * and return result is handled properly.
-   * - This function is used by `spawn_await()` shouldn't really be called directly.
+   * Add and wait for result of an separate `thread` process.
+   * - This function needs to be prefixed with `yield`
    *
-   * @see https://docs.python.org/3.7/library/asyncio-task.html#awaitables
+   * @param callable|shell $callable
+   * @param mixed $args
+   *
+   * @return mixed
+   * @codeCoverageIgnore
+   */
+  function threading($callable, ...$args)
+  {
+    return awaitable_future(function () use ($callable, $args) {
+      return Kernel::addThread($callable, ...$args);
+    });
+  }
+
+  /**
+   * Add and wait for result of an separate `thread` process.
+   * This function turns the calling function internal __state/type__ to **process/threaded** that's handled
+   * differently when used by `gather()`.
+   *
+   * - This function needs to be prefixed with `yield`
+   *
+   * @see https://docs.python.org/3.10/library/threading.html#module-threading
+   *
+   * @param callable $function
+   * @param mixed $args
+   *
+   * @return mixed
+   * @codeCoverageIgnore
+   */
+  function add_thread($function, ...$args)
+  {
+    return Kernel::addThread($function, ...$args);
+  }
+
+  /**
+   * Wrap the a spawn `future` or `thread` with `yield`, this insure the execution
+   * and return result is handled properly.
+   * - This function shouldn't be called directly, it's an helper for others.
+   *
+   * @see https://docs.python.org/3.10/library/asyncio-task.html#awaitables
    *
    * @param Generator|callable $awaitableFunction
    * @param mixed $args

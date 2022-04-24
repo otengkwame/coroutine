@@ -11,6 +11,7 @@ jobs:
   linux:
     name: Linux CI
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -40,6 +41,7 @@ jobs:
       - name: Test with phpunit
         run: vendor/bin/phpunit -d zend.enable_gc=0 --coverage-clover=coverage/phpunit/clover.xml
       - name: Submit code coverage
+        if: ${{ success() }} || ${{ failure() }}
         run: bash <(curl -s https://codecov.io/bash)
 
   linux_php81:

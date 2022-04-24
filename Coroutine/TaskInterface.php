@@ -33,7 +33,7 @@ interface TaskInterface
   public function getCycles(): int;
 
   /**
-   * Set Task type, currently either `paralleled`, `async`, `awaited`,
+   * Set Task type, currently either `paralleled`, `async`, `awaited`, `async_method`, `threaded`
    * `stateless`, or `monitored`.
    *
    * @param string $type
@@ -131,6 +131,13 @@ interface TaskInterface
    * @return bool
    */
   public function isAsync(): bool;
+
+  /**
+   * A flag that indicates the task is a `async` **class** method.
+   *
+   * @return bool
+   */
+  public function isAsyncMethod(): bool;
 
   /**
    * A flag that indicates the task is doing a `self` cancellation.

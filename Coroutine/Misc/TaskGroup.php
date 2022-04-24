@@ -487,6 +487,8 @@ final class TaskGroup extends ContextAsyncIterator
             && !$this->completed[$this->completed()] instanceof \Throwable
           )
             $coroutine->cancelTask($tid);
+          elseif ($task->isAsyncMethod())
+            $coroutine->cancelTask($tid);
           else
             yield \cancel_task($tid, null, 'Invalid task ID!', true);
 

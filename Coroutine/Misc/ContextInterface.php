@@ -40,8 +40,8 @@ interface ContextInterface
    * - This function needs to be prefixed with `yield`
    *
    * @return void
-   * @throws \Error If not call from inside an `async()` created function.
-   * - Use/call `yield task_type('async');` first inside a regular function/method.
+   * @throws \Error If not call from inside an `async()` created function, or method.
+   * - Use/call `yield task_type();` first inside a regular function/method.
    */
   public function withSet();
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Async;
 
+use Async\Spawn\Thread;
 use Async\Spawn\Future;
 use Async\Spawn\FutureHandler;
 use Async\Spawn\FutureInterface;
@@ -176,6 +177,11 @@ final class Coroutine implements CoroutineInterface
   protected $parallel;
 
   /**
+   * @var Thread
+   */
+  protected $thread;
+
+  /**
    * @var Signaler
    */
   protected $signaler;
@@ -214,6 +220,10 @@ final class Coroutine implements CoroutineInterface
           \uv_close($event);
       }
 
+      if ($this->thread instanceof Thread) {
+        $this->thread->close();
+      }
+
       @\uv_stop($this->uv);
       @\uv_run($this->uv, \UV::RUN_NOWAIT);
       @\uv_loop_delete($this->uv);
@@ -225,6 +235,7 @@ final class Coroutine implements CoroutineInterface
 
     $this->uv = null;
     $this->parallel = null;
+    $this->thread = null;
     unset($this->future);
     $this->future = null;
     unset($this->signaler);
@@ -302,6 +313,9 @@ final class Coroutine implements CoroutineInterface
         unset($this->timers[(int) $timer]);
         $this->executeTask($taskTimer[1], $timer);
       };
+
+      if (\IS_THREADED_UV)
+        $this->thread = new Thread($this, $this->uv);
     }
 
     if ($this->isHighTimer = \function_exists('hrtime'))
@@ -460,11 +474,21 @@ final class Coroutine implements CoroutineInterface
     return $this->parallel;
   }
 
+  public function getThread(): Thread
+  {
+    return $this->thread;
+  }
+
   public function addFuture($callable, int $timeout = 0, bool $display = false, $channel = null): FutureInterface
   {
     $future = $this->parallel->add($callable, $timeout, $channel);
 
     return $display ? $future->displayOn() : $future;
+  }
+
+  public function addThread(int $tid, callable $callable, ...$args): Thread
+  {
+    return $this->thread->create($tid, $callable, ...$args);
   }
 
   public function isUv(): bool
@@ -923,16 +947,17 @@ final class Coroutine implements CoroutineInterface
   }
 
   /**
-   * Check and return `true` for `no` pending I/O events, signals, subprocess futures,
-   * streams/sockets/fd activity, timers or tasks.
+   * Check and return `true` for **no** *pending I/O*, *events*, *signals*, *subprocess futures*,
+   * *streams/sockets/fd* activity, *timers*, *tasks*, or *threads*.
    */
-  protected function hasCoroutines(): bool
+  protected function isCoroutinesDone(): bool
   {
     return $this->taskQueue->isEmpty()
       && empty($this->waitingForRead)
       && empty($this->waitingForWrite)
       && empty($this->timers)
       && $this->future->isEmpty()
+      && $this->thread->isEmpty()
       && !$this->isSignaling()
       && $this->isIoEmpty()
       && $this->isFsEmpty();
@@ -961,7 +986,7 @@ final class Coroutine implements CoroutineInterface
   protected function ioWaiting()
   {
     while (true) {
-      if ($this->hasCoroutines()) {
+      if ($this->isCoroutinesDone()) {
         $this->ioStop();
         break;
       } else {

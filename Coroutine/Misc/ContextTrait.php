@@ -76,14 +76,14 @@ trait ContextTrait
    * - This function needs to be prefixed with `yield`
    *
    * @return void
-   * @throws \Error If not call from inside an `async()` created function.
-   * - Use/call `yield task_type('async');` first inside a regular function/method.
+   * @throws \Error If not call from inside an `async()` created function, or method.
+   * - Use/call `yield task_type();` first inside a regular function/method.
    */
   public function withSet()
   {
     $task = \coroutine()->getTask(yield \current_task());
-    if (!$task->isAsync()) {
-      \panic(new \Error("Can only use `async_with()` or `with()` inside an `async()` created function!" . \EOL . "Use/call `yield task_type();` first inside a regular function/method." . \EOL));
+    if (!$task->isAsync() && !$task->isAsyncMethod()) {
+      \panic(new \Error("Can only use `async_with()` or `with()` inside an `async()` created function, or method!" . \EOL . "Use/call `yield task_type();` first inside a regular function/method." . \EOL));
     }
 
     $this->withTask = $task->setWith($this);

@@ -261,6 +261,11 @@ final class Task implements TaskInterface
     return $this->taskType === 'async';
   }
 
+  public function isAsyncMethod(): bool
+  {
+    return $this->taskType === 'async_method';
+  }
+
   public function isSelfCancellation(): bool
   {
     return $this->taskType === 'cancellation';
@@ -415,9 +420,19 @@ final class Task implements TaskInterface
       $this->exception = null;
       return $value;
     } else {
-      $value = ($this->coroutine instanceof \Generator)
-        ? $this->coroutine->send($this->sendValue)
-        : $this->sendValue;
+      if ($this->isAsyncMethod())
+        try {
+          $value = ($this->coroutine instanceof \Generator)
+            ? $this->coroutine->send($this->sendValue)
+            : $this->sendValue;
+        } catch (\Throwable $error) {
+          $this->setState('erred');
+          $value = $this->error = $error;
+        }
+      else
+        $value = ($this->coroutine instanceof \Generator)
+          ? $this->coroutine->send($this->sendValue)
+          : $this->sendValue;
 
       if (!empty($value) && !$this->isStateless())
         $this->result = $value;

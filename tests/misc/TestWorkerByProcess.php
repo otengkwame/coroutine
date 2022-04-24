@@ -15,7 +15,7 @@ use Async\Misc\Event;
 use Async\Misc\TaskGroup;
 use PHPUnit\Framework\TestCase;
 
-/* this function is in tests\misc\functions.php file
+/* this function is in Coroutine\Internal.php file
 function fib($n)
 {
   if ($n <= 2)
@@ -32,7 +32,7 @@ def fib(n):
         return fib(n - 1) + fib(n - 2)
 */
 
-class TestWorkers extends TestCase
+class TestWorkerByProcess extends TestCase
 {
   /**
    * @var Event

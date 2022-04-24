@@ -440,6 +440,32 @@ if (!\function_exists('coroutine_run')) {
   \define('run_in_process', 'run_in_process');
 
   /**
+   * Run `callable(*args)` in a separate **thread** and return the result. If the calling task is cancelled,
+   * the underlying worker thread (if started) is set aside and sent a termination request. Once it start running,
+   * it will run fully to completion as a kind of zombie.
+   *
+   * The given `callable` executes in an `thread` and requires a `ZTS` **PHP** version.
+   * - This function needs to be prefixed with `yield`
+   *
+   * @param callable $callable
+   * @param mixed ...$args
+   * @return mixed
+   * @see https://curio.readthedocs.io/en/latest/reference.html?highlight=TaskError#run_in_thread
+   */
+  function run_in_thread(callable $callable, ...$args)
+  {
+    return awaitable_future(function () use ($callable, $args) {
+      return Kernel::addThread($callable, ...$args);
+    });
+  }
+
+  /**
+   * Run `callable(*args)` in a separate **thread** and return the result. If the calling task is cancelled,
+   * the underlying worker thread (if started) is set aside and sent a termination request.
+   */
+  \define('run_in_thread', 'run_in_thread');
+
+  /**
    * This function will `pause` and execute the `label` function, with `arguments`,
    * only functions created with `async`, or some **reserved**,  or
    * a `PHP` builtin callable will work, anything else will throw `Panic` exception.
@@ -874,7 +900,23 @@ if (!\function_exists('coroutine_run')) {
   \define('stateless_task', 'stateless_task');
 
   /**
-   * Set current Task context type, currently either `paralleled`, `async`, `awaited`, `stateless`, or `monitored`.
+   * Set current context _Task_ to a **async** _`function/method`_. This is necessary to use `async_with()` and `with()`
+   * inside _regular_ `function` or `class` methods and for the `task` to get _handled_ correctly on _errors_.
+   *
+   * This function will return the current context task ID.
+   *
+   * - This function needs to be prefixed with `yield`
+   *
+   * @return int
+   */
+  function method_task()
+  {
+    return \task_type('async_method');
+  }
+
+  /**
+   * Set current Task context type, currently either `paralleled`, `async`, `awaited`, `async_method`, `threaded`,
+   * `stateless`, or `monitored`.
    * Will return the current task ID.
    *
    * - This function needs to be prefixed with `yield`
