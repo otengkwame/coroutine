@@ -957,7 +957,7 @@ final class Coroutine implements CoroutineInterface
       && empty($this->waitingForWrite)
       && empty($this->timers)
       && $this->future->isEmpty()
-      && $this->thread->isEmpty()
+      && (isset($this->thread) ? $this->thread->isEmpty() : true)
       && !$this->isSignaling()
       && $this->isIoEmpty()
       && $this->isFsEmpty();

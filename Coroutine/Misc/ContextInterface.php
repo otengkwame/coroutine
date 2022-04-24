@@ -41,7 +41,7 @@ interface ContextInterface
    *
    * @return void
    * @throws \Error If not call from inside an `async()` created function, or method.
-   * - Use/call `yield task_type();` first inside a regular function/method.
+   * - Use/call `yield method_task();` first inside a regular function/method.
    */
   public function withSet();
 
