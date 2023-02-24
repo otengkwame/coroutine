@@ -45,13 +45,13 @@ class TcpServer
 $loop = uv_loop_new();
 
 $tcpServer = new TcpServer($loop);
-$tcpServer->bind('0.0.0.0', 9876);
+$tcpServer->bind('127.0.0.1', 9876);
 $tcpServer->listen();
 
 $closed = 0;
 for ($i = 0; $i < 4; $i++) {
     $c = uv_tcp_init($loop);
-    uv_tcp_connect($c, uv_ip4_addr('0.0.0.0', 9876), function ($stream, $stat) use (&$closed, $tcpServer) {
+    uv_tcp_connect($c, uv_ip4_addr('127.0.0.1', 9876), function ($stream, $stat) use (&$closed, $tcpServer) {
         $closed++;
         uv_close($stream);
 
