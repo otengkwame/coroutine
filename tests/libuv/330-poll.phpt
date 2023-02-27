@@ -10,19 +10,19 @@ stream_set_blocking($socket, 0);
 $poll = uv_poll_init(uv_default_loop(), $socket);
 uv_poll_start($poll, UV::READABLE, function($poll, $stat, $ev, $socket) {
     $conn = stream_socket_accept($socket);
-
     uv_poll_stop($poll);
+
+    echo fread($conn, 4) . EOL;
+
     $pp = uv_poll_init(uv_default_loop(), $conn);
     uv_poll_start($pp, UV::WRITABLE, function($poll, $stat, $ev, $conn) use (&$pp) {
         uv_poll_stop($poll);
-        if ('\\' === \DIRECTORY_SEPARATOR) {
-            fwrite($conn, "OK");
+
+        if (\IS_WINDOWS)
+            fwrite($conn, 'OK');
+        uv_fs_write(uv_default_loop(), $conn, "OK", -1, function($conn, $nwrite){
             fclose($conn);
-        } else {
-            uv_fs_write(uv_default_loop(), $conn, "OK", -1, function($conn, $nwrite){
-                fclose($conn);
-            });
-        }
+        });
     });
 });
 
