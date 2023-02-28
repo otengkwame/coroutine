@@ -10,16 +10,13 @@ on:
 jobs:
   windows:
     name: Windows CI
-    runs-on: windows-2019
+    runs-on: windows-latest
     continue-on-error: true
     strategy:
       fail-fast: false
-      matrix:
-        operating-system: [windows-2019]
-        php: ['7.4']
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
@@ -27,11 +24,11 @@ jobs:
         extensions: mbstring, simplexml, curl, dom, sockets, fileinfo, openssl, xdebug, uv-beta
         coverage: xdebug
       env:
-        PHPTS: ts # specify ts or nts
+        PHPTS: nts # specify ts or nts
     - name: Install dependencies
       run: composer install
     - name: Test with phpunit
-      run: vendor\bin\phpunit -d zend.enable_gc=0 --coverage-clover=coverage/phpunit/clover.xml
+      run: vendor\bin\phpunit --coverage-clover=coverage/phpunit/clover.xml
     - name: Submit code coverage
       if: ${{ success() }} || ${{ failure() }}
       uses: codecov/codecov-action@v1
@@ -44,12 +41,9 @@ jobs:
     continue-on-error: true
     strategy:
       fail-fast: false
-      matrix:
-        operating-system: [windows-latest]
-        php: ['8.1']
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
