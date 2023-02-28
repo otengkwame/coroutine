@@ -25,7 +25,6 @@ jobs:
       with:
         php-version: '7.4'
         extensions: mbstring, simplexml, curl, dom, sockets, fileinfo, openssl, xdebug, uv-beta
-        ini-values: extension=uv
         coverage: xdebug
       env:
         PHPTS: ts # specify ts or nts
