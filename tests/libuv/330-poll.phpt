@@ -18,11 +18,14 @@ uv_poll_start($poll, UV::READABLE, function($poll, $stat, $ev, $socket) {
     uv_poll_start($pp, UV::WRITABLE, function($poll, $stat, $ev, $conn) use (&$pp) {
         uv_poll_stop($poll);
 
-        if (\IS_WINDOWS)
-            fwrite($conn, 'OK');
-        uv_fs_write(uv_default_loop(), $conn, "OK", -1, function($conn, $nwrite){
+        if (\IS_WINDOWS) {
+            fwrite($conn, "OK");
             fclose($conn);
-        });
+        } else {
+            uv_fs_write(uv_default_loop(), $conn, "OK", -1, function($conn, $nwrite){
+                fclose($conn);
+            });
+        }
     });
 });
 
