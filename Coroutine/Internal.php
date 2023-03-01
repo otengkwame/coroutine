@@ -134,11 +134,11 @@ if (!\function_exists('is_type')) {
     $ip = null;
     // a single port has been given => assume localhost
     if ((string) (int) $uri === (string) $uri) {
-      $hostname = \gethostname();
-      $ip = \gethostbyname($hostname);
+      // $hostname = \gethostname();
+      $ip = '127.0.0.1'; //\gethostbyname($hostname);
       // @codeCoverageIgnoreStart
-      if (!\is_int(\ip2long($ip)))
-        throw new \Exception('Could not attain hostname IP!');
+      // if (!\is_int(\ip2long($ip)))
+      //y   throw new \Exception('Could not attain hostname IP!');
       // @codeCoverageIgnoreEnd
 
       $uri = $ip . ':' . $uri;

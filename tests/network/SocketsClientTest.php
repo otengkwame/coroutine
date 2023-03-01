@@ -20,7 +20,7 @@ class SocketsClientTest extends TestCase
     #Connect to Server
     #Start SSL
     $client = yield net_client("$hostname:$port");
-    $this->assertTrue((\IS_WINDOWS || \IS_PHP8 ? $client instanceof Sockets : $client instanceof \UV));
+    $this->assertTrue((\IS_PHP8 ? $client instanceof Sockets : $client instanceof \UV));
 
     if ($client instanceof \UV) {
       $request = new SocketMessage('request', $hostname);

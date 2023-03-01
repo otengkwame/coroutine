@@ -239,7 +239,7 @@ interface SocketsInterface
    * @param int $how
    * @return void
    */
-  public function shutdown($how);
+  public function shutdown(int $how);
 
   public function get_peer();
 

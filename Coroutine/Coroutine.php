@@ -298,11 +298,11 @@ final class Coroutine implements CoroutineInterface
         }
 
         if (isset($this->waitingForRead[(int) $stream]) && ($events & \UV::READABLE)) {
-          $this->updateScheduler('read', $stream);
+          $this->updateScheduler('read', $stream, true);
         }
 
         if (isset($this->waitingForWrite[(int) $stream]) && ($events & \UV::WRITABLE)) {
-          $this->updateScheduler('write', $stream);
+          $this->updateScheduler('write', $stream, true);
         }
       };
 
@@ -341,10 +341,12 @@ final class Coroutine implements CoroutineInterface
           $this->events[(int) $stream] = false;
           break;
         case 'tcp_socket/ssl':
-          $this->events[(int) $stream] = \uv_poll_init($this->uv, $stream);
-          break;
         default:
-          $this->events[(int) $stream] = \uv_poll_init_socket($this->uv, $stream);
+          if (\IS_WINDOWS)
+            $this->events[(int) $stream] = \uv_poll_init_socket($this->uv, $stream);
+          else
+            $this->events[(int) $stream] = \uv_poll_init($this->uv, $stream);
+          break;
       }
     }
 
@@ -496,11 +498,6 @@ final class Coroutine implements CoroutineInterface
     return (\IS_UV && $this->uv instanceof \UVLoop);
   }
 
-  public function isUvActive(): bool
-  {
-    return ($this->isUv() && \IS_LINUX);
-  }
-
   public function isPcntl(): bool
   {
     return \extension_loaded('pcntl')
@@ -557,18 +554,18 @@ final class Coroutine implements CoroutineInterface
    * @param string $type `read` or `write`
    * @param mixed $stream
    */
-  protected function updateScheduler(string $type, $stream)
+  protected function updateScheduler(string $type, $stream, bool $removeEvent = false)
   {
     if ($type == 'read') {
       list(, $tasks) = $this->waitingForRead[(int) $stream];
-      $this->removeReader($stream);
+      $this->removeReader($stream, $removeEvent);
 
       foreach ($tasks as $task) {
         $this->executeTask($task, $stream);
       }
     } elseif ($type == 'write') {
       list(, $tasks) = $this->waitingForWrite[(int) $stream];
-      $this->removeWriter($stream);
+      $this->removeWriter($stream, $removeEvent);
 
       foreach ($tasks as $task) {
         $this->executeTask($task, $stream);
@@ -925,7 +922,7 @@ final class Coroutine implements CoroutineInterface
   /**
    * Runs all pending timers.
    *
-   * @return int|void
+   * @return int|false
    */
   protected function runTimers()
   {
@@ -985,6 +982,7 @@ final class Coroutine implements CoroutineInterface
    */
   protected function ioWaiting()
   {
+    $isUv = $this->isUv();
     while (true) {
       if ($this->isCoroutinesDone()) {
         $this->ioStop();
@@ -993,17 +991,11 @@ final class Coroutine implements CoroutineInterface
         $this->future->processing();
         $nextTimeout = $this->runTimers();
         $streamWait = $this->waitTime($nextTimeout);
-        if ($this->isUvActive()) {
-          \uv_run($this->uv, ($streamWait || $this->channelCounter ? \UV::RUN_ONCE : \UV::RUN_NOWAIT));
-          $overrideTimeout = $this->isFutureActive ? 0 : $this->waitTime($nextTimeout);
-          $this->ioSocketStream($overrideTimeout);
-        } else {
-          $overrideTimeout = $this->isFutureActive ? 0 : $streamWait;
-          $this->ioSocketStream($overrideTimeout);
-          if ($this->isUv()) {
-            \uv_run($this->uv, ($this->waitTime($nextTimeout) || $this->channelCounter ? \UV::RUN_ONCE : \UV::RUN_NOWAIT));
-          }
-        }
+        $overrideTimeout = $this->isFutureActive ? 0 : $streamWait;
+        if ($isUv)
+          \uv_run($this->uv, ($overrideTimeout || $this->channelCounter ? \UV::RUN_ONCE : \UV::RUN_NOWAIT));
+
+        $this->ioSocketStream($isUv ? 0 : $overrideTimeout);
 
         yield;
       }
@@ -1051,7 +1043,7 @@ final class Coroutine implements CoroutineInterface
     }
   }
 
-  public function addReader($stream, $task): CoroutineInterface
+  public function addReader($stream, $task, bool $addEvent = true): CoroutineInterface
   {
     $already = true;
     if (isset($this->waitingForRead[(int) $stream])) {
@@ -1061,13 +1053,13 @@ final class Coroutine implements CoroutineInterface
       $this->waitingForRead[(int) $stream] = [$stream, [$task]];
     }
 
-    if ($this->isUvActive() && $already)
+    if ($this->isUv() && $already && $addEvent)
       $this->addEvent($stream);
 
     return $this;
   }
 
-  public function addWriter($stream, $task): CoroutineInterface
+  public function addWriter($stream, $task, bool $addEvent = true): CoroutineInterface
   {
     $already = true;
     if (isset($this->waitingForWrite[(int) $stream])) {
@@ -1077,15 +1069,15 @@ final class Coroutine implements CoroutineInterface
       $this->waitingForWrite[(int) $stream] = [$stream, [$task]];
     }
 
-    if ($this->isUvActive() && $already)
+    if ($this->isUv() && $already && $addEvent)
       $this->addEvent($stream);
 
     return $this;
   }
 
-  public function removeReader($stream): CoroutineInterface
+  public function removeReader($stream, bool $removeEvent = true): CoroutineInterface
   {
-    if ($this->isUvActive()) {
+    if ($this->isUv() && $removeEvent) {
       $this->removeReadEvent($stream);
     }
 
@@ -1094,9 +1086,9 @@ final class Coroutine implements CoroutineInterface
     return $this;
   }
 
-  public function removeWriter($stream): CoroutineInterface
+  public function removeWriter($stream, bool $removeEvent = true): CoroutineInterface
   {
-    if ($this->isUvActive()) {
+    if ($this->isUv() && $removeEvent) {
       $this->removeWriteEvent($stream);
     }
 
@@ -1115,7 +1107,7 @@ final class Coroutine implements CoroutineInterface
 
     if ($first && $this->isPcntl()) {
       \pcntl_signal($signal, array($this->signaler, 'execute'));
-    } elseif ($this->isUvActive() || $this->isUvSignal) {
+    } elseif ($this->isUv() || $this->isUvSignal) {
       if (!isset($this->signals[$signal])) {
         $signals = $this->signaler;
         $this->signals[$signal] = \uv_signal_init($this->uv);
@@ -1135,7 +1127,7 @@ final class Coroutine implements CoroutineInterface
 
     if ($this->signaler->count($signal) === 0 && $this->isPcntl()) {
       \pcntl_signal($signal, \SIG_DFL);
-    } elseif ($this->isUvActive() || $this->isUvSignal) {
+    } elseif ($this->isUv() || $this->isUvSignal) {
       if (isset($this->signals[$signal]) && $this->signaler->count($signal) === 0) {
         if (\uv_is_active($this->signals[$signal]))
           @\uv_signal_stop($this->signals[$signal]);
@@ -1150,7 +1142,7 @@ final class Coroutine implements CoroutineInterface
   public function initSignals()
   {
     $this->isUvSignal = \IS_UV;
-    if (empty($this->signaler) && ($this->isPcntl() || $this->isUvActive() || $this->isUvSignal)) {
+    if (empty($this->signaler) && ($this->isPcntl() || $this->isUv() || $this->isUvSignal)) {
       $this->signaler = new Signaler($this);
 
       if ($this->isPcntl()) {

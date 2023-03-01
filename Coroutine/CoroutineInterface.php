@@ -130,7 +130,7 @@ interface CoroutineInterface
    * @param resource $stream
    * @param Fiber|Task|\Generator|Callable $task
    */
-  public function addReader($stream, $task): CoroutineInterface;
+  public function addReader($stream, $task, bool $addEvent = true): CoroutineInterface;
 
   /**
    * Adds a write `event/socket/stream/file` descriptor to start
@@ -143,7 +143,7 @@ interface CoroutineInterface
    * @param resource $stream
    * @param Fiber|Task|\Generator|Callable $task
    */
-  public function addWriter($stream, $task): CoroutineInterface;
+  public function addWriter($stream, $task, bool $addEvent = true): CoroutineInterface;
 
   /**
    * Stop monitoring the `event/socket/stream/file` descriptor for read availability.
@@ -153,7 +153,7 @@ interface CoroutineInterface
    *
    * @param resource $stream
    */
-  public function removeReader($stream): CoroutineInterface;
+  public function removeReader($stream, bool $removeEvent = true): CoroutineInterface;
 
   /**
    * Stop monitoring the `event/socket/stream/file` descriptor for write availability.
@@ -163,7 +163,7 @@ interface CoroutineInterface
    *
    * @param resource $stream
    */
-  public function removeWriter($stream): CoroutineInterface;
+  public function removeWriter($stream, bool $removeEvent = true): CoroutineInterface;
 
   /**
    * Executes a function after x seconds.
@@ -402,15 +402,6 @@ interface CoroutineInterface
    * @return Thread
    */
   public function getThread(): Thread;
-
-  /**
-   * Is `libuv` features available and the system is **Linux**.
-   *
-   * `Note:` Network related `libuv` features are currently broken on **Windows**.
-   *
-   * @return bool
-   */
-  public function isUvActive(): bool;
 
   /**
    * Check if `PCNTL` extension is available for asynchronous signaling.

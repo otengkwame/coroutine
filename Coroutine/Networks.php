@@ -31,7 +31,7 @@ final class Networks
   protected static function isUv(): bool
   {
     $co = \coroutine();
-    return ($co instanceof CoroutineInterface && $co->isUvActive() && Co::uvNative());
+    return ($co instanceof CoroutineInterface && $co->isUv() && Co::uvNative());
   }
 
   /**
@@ -315,6 +315,9 @@ final class Networks
   public static function read($handle, $size = -1)
   {
     if (self::isUv() && $handle instanceof \UV) {
+      if (\uv_is_closing($handle))
+        return false;
+
       return yield new Kernel(
         function (TaskInterface $task, CoroutineInterface $coroutine) use ($handle) {
           if (!\uv_is_closing($handle)) {
@@ -353,6 +356,9 @@ final class Networks
   public static function write($handle, $data = '')
   {
     if (self::isUv() && $handle instanceof \UV) {
+      if (\uv_is_closing($handle))
+        return false;
+
       return yield new Kernel(
         function (TaskInterface $task, CoroutineInterface $coroutine) use ($handle, $data) {
           if (!\uv_is_closing($handle)) {
@@ -397,6 +403,7 @@ final class Networks
               $coroutine->ioRemove();
               $task->sendValue($status);
               $coroutine->schedule($task);
+              unset($handle);
             }
           );
         }
@@ -408,7 +415,6 @@ final class Networks
 
     return false;
   }
-
 
   /**
    * - This function needs to be prefixed with `yield`
@@ -586,11 +592,11 @@ final class Networks
 
   public static function bind(string $scheme, string $address, int $port)
   {
-    $ip = \uv_ip6_addr($address, $port);
-    if (\strpos($address, ':') === false)
-      $ip = \uv_ip4_addr($address, $port);
-
     $uv = \coroutine()->getUV();
+    $ip = (\strpos($address, ':') === false)
+      ? \uv_ip4_addr($address, $port)
+      : \uv_ip6_addr($address, $port);
+
     switch ($scheme) {
       case 'file':
       case 'unix':
@@ -720,9 +726,9 @@ final class Networks
 
         $coroutine->ioAdd();
         $uv = $coroutine->getUV();
-        $ip = @\uv_ip6_addr($address, $port);
-        if (\strpos($address, ':') === false)
-          $ip = @\uv_ip4_addr($address, $port);
+        $ip = (\strpos($address, ':') === false)
+          ? @\uv_ip4_addr($address, $port)
+          : @\uv_ip6_addr($address, $port);
 
         switch ($scheme) {
           case 'file':

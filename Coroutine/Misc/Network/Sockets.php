@@ -315,7 +315,8 @@ class Sockets extends Context implements SocketsInterface
   public function read(int $length = -1, int $mode = \PHP_BINARY_READ)
   {
     $data = false;
-    if ($this->secured) {
+    if ($this->closed) {
+    } elseif ($this->secured) {
       if (\is_resource($this->stream)) {
         yield Kernel::readWait($this->stream);
         $data = \stream_get_contents($this->stream, $length);
@@ -337,7 +338,8 @@ class Sockets extends Context implements SocketsInterface
   {
     $count = false;
     $length = (empty($length) ? \strlen($data) : $length);
-    if ($this->secured) {
+    if ($this->closed) {
+    } elseif ($this->secured) {
       if (\is_resource($this->stream)) {
         yield Kernel::writeWait($this->stream);
         $count = \fwrite($this->stream, $data,  $length);
@@ -483,16 +485,16 @@ class Sockets extends Context implements SocketsInterface
     }
   }
 
-  public function shutdown($how)
+  public function shutdown(int $how = 2)
   {
     if ($this->secured) {
       if (\is_resource($this->stream))
-        \stream_socket_shutdown($this->stream, 2);
+        \stream_socket_shutdown($this->stream, $how);
     } else {
       if (\is_resource($this->stream))
-        \stream_socket_shutdown($this->stream, 2);
+        \stream_socket_shutdown($this->stream, $how);
       elseif ($this->socket)
-        \socket_shutdown($this->socket, 2);
+        \socket_shutdown($this->socket, $how);
     }
   }
 

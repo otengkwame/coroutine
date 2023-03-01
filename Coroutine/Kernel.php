@@ -384,7 +384,7 @@ final class Kernel
   {
     return new Kernel(
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($streamSocket, $immediately) {
-        $coroutine->addReader($streamSocket, $task);
+        $coroutine->addReader($streamSocket, $task, false);
         if ($immediately) {
           $coroutine->schedule($task);
         }
@@ -403,7 +403,7 @@ final class Kernel
   {
     return new Kernel(
       function (TaskInterface $task, CoroutineInterface $coroutine) use ($streamSocket, $immediately) {
-        $coroutine->addWriter($streamSocket, $task);
+        $coroutine->addWriter($streamSocket, $task, false);
         if ($immediately) {
           $coroutine->schedule($task);
         }
