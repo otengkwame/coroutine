@@ -211,13 +211,14 @@ class SemaphoreTest extends TestCase
 
     \coroutine_run(worker_timeout, 1);
 
+    $this->assertEquals([
+      'sleep',
+      'lock_wait',
+      'lock_timeout',
+      'sleep_done',
+    ], $this->results);
+    /*
     if (\IS_PHP8)
-      $this->assertEquals([
-        'sleep',
-        'lock_wait',
-        'lock_timeout',
-        'sleep_done',
-      ], $this->results);
     else
       $this->assertEquals([
         'sleep',
@@ -225,8 +226,7 @@ class SemaphoreTest extends TestCase
         'sleep_done',
         'lock_timeout',
       ], $this->results);
-
-    /* Originally
+ Originally
 assert results == [
             'sleep',
             'lock_wait',

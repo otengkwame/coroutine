@@ -160,14 +160,7 @@ class EventTest extends TestCase
             'event_timeout',
             'sleep_done',
         ]
-*/
     if (\IS_PHP8)
-      $this->assertEquals([
-        'sleep',
-        'event_wait',
-        'event_timeout',
-        'sleep_done'
-      ], $this->results);
     else
       $this->assertEquals([
         'sleep',
@@ -175,6 +168,13 @@ class EventTest extends TestCase
         'sleep_done',
         'event_timeout'
       ], $this->results);
+*/
+    $this->assertEquals([
+      'sleep',
+      'event_wait',
+      'event_timeout',
+      'sleep_done'
+    ], $this->results);
   }
 
   public function test_event_wait_notimeout()

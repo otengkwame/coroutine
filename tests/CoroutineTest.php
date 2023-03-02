@@ -177,8 +177,8 @@ class CoroutineTest extends TestCase
         $h = fopen('php://temp', 'r+');
         $coroutine->addWriter($h, function () use ($h, $coroutine) {
             fwrite($h, 'hello world');
-            $coroutine->removeWriter($h);
-        });
+            $coroutine->removeWriter($h, false);
+        }, false);
         $coroutine->run();
         rewind($h);
         $this->assertEquals('hello world', stream_get_contents($h));
@@ -195,8 +195,8 @@ class CoroutineTest extends TestCase
         $result = null;
         $coroutine->addReader($h, function () use ($h, $coroutine, &$result) {
             $result = fgets($h);
-            $coroutine->removeReader($h);
-        });
+            $coroutine->removeReader($h, false);
+        }, false);
         $coroutine->run();
         $this->assertEquals('hello world', $result);
 

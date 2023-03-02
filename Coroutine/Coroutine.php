@@ -993,7 +993,10 @@ final class Coroutine implements CoroutineInterface
         $streamWait = $this->waitTime($nextTimeout);
         $overrideTimeout = $this->isFutureActive ? 0 : $streamWait;
         if ($isUv)
-          \uv_run($this->uv, ($overrideTimeout || $this->channelCounter ? \UV::RUN_ONCE : \UV::RUN_NOWAIT));
+          \uv_run(
+            $this->uv,
+            (($streamWait || $this->channelCounter) && $this->isFutureActive !== false ? \UV::RUN_ONCE : \UV::RUN_NOWAIT)
+          );
 
         $this->ioSocketStream($isUv ? 0 : $overrideTimeout);
 
