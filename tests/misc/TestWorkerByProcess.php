@@ -136,7 +136,7 @@ class TestWorkerByProcess extends TestCase
     coroutine_run(main);
 
     $this->assertEquals([
-      10, 9, 8, 7, 6, 5, 'cancel', 4, 3, 2, 1
+      10, 9, 8, 7, 6, 5, 4, 'cancel', 3, 2, 1
     ], $this->results);
 
     /* Originally
@@ -179,7 +179,7 @@ class TestWorkerByProcess extends TestCase
     coroutine_run(main);
 
     $this->assertEquals([
-      10, 9, 8, 'cancel', 7, 6, 5, 4, 3, 2, 1
+      10, 9, 8, 7, 'cancel', 6, 5, 4, 3, 2, 1
     ], $this->results);
 
     /* Originally
