@@ -995,7 +995,7 @@ final class Coroutine implements CoroutineInterface
         if ($isUv)
           \uv_run(
             $this->uv,
-            (($streamWait || $this->channelCounter) && $this->isFutureActive !== false ? \UV::RUN_ONCE : \UV::RUN_NOWAIT)
+            ($streamWait || $this->channelCounter || $this->isFutureActive !== false ? \UV::RUN_ONCE : \UV::RUN_NOWAIT)
           );
 
         $this->ioSocketStream($isUv ? 0 : $overrideTimeout);
