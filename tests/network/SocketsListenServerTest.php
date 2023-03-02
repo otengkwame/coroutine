@@ -34,7 +34,7 @@ class SocketsListenServerTest extends TestCase
 
   public function taskListen($client)
   {
-    $this->assertTrue((\IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
+    $this->assertTrue((!\IS_UV || \IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
     yield net_stop($this->taskId);
   }
 
@@ -44,7 +44,7 @@ class SocketsListenServerTest extends TestCase
     #Connect to Server
     try {
       $client = yield net_client($port);
-      $this->assertTrue((\IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
+      $this->assertTrue((!\IS_UV || \IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
     } catch (\RuntimeException $e) {
       $this->assertRegExp('/[Failed to connect to: tcp:]/', $e->getMessage());
       yield shutdown();
@@ -74,7 +74,7 @@ class SocketsListenServerTest extends TestCase
     yield \sleep_for(.005);
     #Connect to Server
     $client = yield net_client($port);
-    $this->assertTrue((\IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
+    $this->assertTrue((!\IS_UV || \IS_PHP8 ? $client instanceof SocketsInterface : $client instanceof \UV));
     #Send a command
     $wrote = yield net_write($client, 'hi');
     $this->assertEquals(2, $wrote);

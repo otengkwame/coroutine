@@ -33,7 +33,7 @@ class SocketsServerTest extends TestCase
 
     $this->expectOutputRegex('/[Listening to ' . $port . 'for connections]/');
     $serverInstance = yield net_server($port);
-    $this->assertTrue((\IS_PHP8 ? $serverInstance instanceof Sockets : $serverInstance instanceof \UV));
+    $this->assertTrue((!\IS_UV || \IS_PHP8 ? $serverInstance instanceof Sockets : $serverInstance instanceof \UV));
     $fakeClientSkipped = false;
     while ($this->loopController) {
       if (!$fakeClientSkipped) {
@@ -44,7 +44,7 @@ class SocketsServerTest extends TestCase
 
       // Will pause current task and wait for connection, all others tasks will continue to run
       $connectedServer = yield net_accept($serverInstance);
-      $this->assertTrue((\IS_PHP8 ? $connectedServer instanceof Sockets : $connectedServer instanceof \UV));
+      $this->assertTrue((!\IS_UV || \IS_PHP8 ? $connectedServer instanceof Sockets : $connectedServer instanceof \UV));
       // Once an connection is made, will create new task and continue execution there, will not block
       yield \away($this->taskHandleClient($connectedServer));
     }
@@ -87,6 +87,7 @@ class SocketsServerTest extends TestCase
 
   public function taskFakeClientExit($port)
   {
+    $this->loopController = false;
     #Connect to Server
     $client = yield net_client($port);
     #Send a command
