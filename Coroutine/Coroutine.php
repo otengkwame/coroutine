@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Async;
 
-use Async\Spawn\Thread;
 use Async\Spawn\Future;
 use Async\Spawn\FutureHandler;
 use Async\Spawn\FutureInterface;
 use Async\Spawn\ChanneledInterface;
+use Async\Threads\Thread;
+use Async\Threads\TWorker;
 use Async\Kernel;
 use Async\Task;
 use Async\Parallel;
@@ -488,7 +489,7 @@ final class Coroutine implements CoroutineInterface
     return $display ? $future->displayOn() : $future;
   }
 
-  public function addThread(int $tid, callable $callable, ...$args): Thread
+  public function addThread(int $tid, callable $callable, ...$args): TWorker
   {
     return $this->thread->create($tid, $callable, ...$args);
   }

@@ -21,7 +21,8 @@ use Async\Misc\Contextify;
 use Async\Misc\ContextInterface;
 use Async\Misc\Semaphore;
 use Async\Misc\TimeoutAfter;
-use Async\Spawn\Thread;
+use Async\Threads\Thread;
+use Async\Threads\TWorker;
 use Async\Spawn\Channeled;
 use Async\Spawn\FutureInterface;
 use Psr\Container\ContainerInterface;
@@ -275,7 +276,7 @@ final class Kernel
 
           $error = ($isContext || $type) ? new TaskCancelled("Task {$tid}!") : new CancelledError("Task {$tid}!");
           $customData = $cancelTask->getCustomData();
-          if ($customData instanceof FutureInterface || $customData instanceof Thread) {
+          if ($customData instanceof FutureInterface || $customData instanceof Thread || $customData instanceof TWorker) {
             $task->sendValue(true);
             $cancelTask->setCaller($task);
             if ($customData instanceof FutureInterface) {
@@ -334,7 +335,7 @@ final class Kernel
           }
 
           $customData = $join->getCustomData();
-          if ($customData instanceof Thread) {
+          if ($customData instanceof Thread || $customData instanceof TWorker) {
             $coroutine->schedule($join);
             return $customData->join($tid);
           }
@@ -1168,7 +1169,7 @@ final class Kernel
           $callableTask = $coroutine->getTask($taskId);
           if (!$coroutine->isCompleted($taskId)) {
             $futureThread = $callableTask->getCustomData();
-            if ($futureThread instanceof FutureInterface || $futureThread instanceof Thread) {
+            if ($futureThread instanceof FutureInterface || $futureThread instanceof Thread || $futureThread instanceof TWorker) {
               $callableTask->setCaller($task);
               if ($futureThread instanceof FutureInterface) {
                 $delay = 1;

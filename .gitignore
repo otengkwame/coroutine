@@ -10,3 +10,4 @@ vendor/
 *.csr
 *.local
 temp
+test.php

@@ -8,7 +8,8 @@ use Async\FiberInterface;
 use Async\Spawn\Channeled;
 use Async\Spawn\FutureInterface;
 use Async\RuntimeException;
-use Async\Spawn\Thread;
+use Async\Threads\Thread;
+use Async\Threads\TWorker;
 
 interface CoroutineInterface
 {
@@ -304,9 +305,9 @@ interface CoroutineInterface
    * @param string|int $tid Thread ID
    * @param callable $callable
    * @param mixed ...$args
-   * @return Thread
+   * @return TWorker
    */
-  public function addThread(int $tid, callable $callable, ...$args): Thread;
+  public function addThread(int $tid, callable $callable, ...$args): TWorker;
 
   /**
    * There are no **UV** file system operations/events pending.
