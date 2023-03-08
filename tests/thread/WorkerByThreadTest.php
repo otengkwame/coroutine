@@ -32,7 +32,7 @@ def fib(n):
         return fib(n - 1) + fib(n - 2)
 */
 
-class ZTSTestWorkerByThread extends TestCase
+class WorkerByThreadTest extends TestCase
 {
   /**
    * @var Event

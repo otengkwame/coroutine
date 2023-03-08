@@ -11,6 +11,7 @@
             <directory suffix=".php">tests/misc/</directory>
             <directory suffix=".php">tests/network/</directory>
             <directory suffix=".php">tests/</directory>
+            <directory suffix=".php">tests/thread/</directory>
         </testsuite>
     </testsuites>
 
