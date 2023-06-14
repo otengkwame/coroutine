@@ -2,7 +2,7 @@
 
 [![Linux](https://github.com/symplely/coroutine/workflows/Linux/badge.svg)](https://github.com/symplely/coroutine/actions?query=workflow%3ALinux)[![Windows](https://github.com/symplely/coroutine/workflows/Windows/badge.svg)](https://github.com/symplely/coroutine/actions?query=workflow%3AWindows)[![macOS](https://github.com/symplely/coroutine/workflows/macOS/badge.svg)](https://github.com/symplely/coroutine/actions?query=workflow%3AmacOS)[![codecov](https://codecov.io/gh/symplely/coroutine/branch/master/graph/badge.svg)](https://codecov.io/gh/symplely/coroutine)[![Codacy Badge](https://app.codacy.com/project/badge/Grade/09861ff18c34465198b93d9d5672dc3e)](https://www.codacy.com/gh/symplely/coroutine/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=symplely/coroutine&amp;utm_campaign=Badge_Grade)[![Maintainability](https://api.codeclimate.com/v1/badges/1bfc3497fde67b111a04/maintainability)](https://codeclimate.com/github/symplely/coroutine/maintainability)
 
-This is version **2x**, it breaks version [1x](https://github.com/symplely/coroutine/tree/1x), by __namespace__ of *global* functions, moving all required  __CONSTANTS__ to the dependence package. This version includes the new **Fiber** implementation, with no need for *PHP* [ext-fibers](https://wiki.php.net/rfc/fibers) extension, slated for **PHP 8.1**. All `ext-fibers` [tests](https://github.com/amphp/ext-fiber/tree/master/tests), and [examples](https://github.com/amphp/ext-fiber/tree/master/examples) as they have them, has been implemented here in [examples/fiber](https://github.com/symplely/coroutine/tree/master/examples/fiber/), [tests/fiber](https://github.com/symplely/coroutine/tree/master/tests/fiber/) and [tests/FiberTest.php](https://github.com/symplely/coroutine/blob/master/tests/FiberTest.php).
+This is version **2x**, it breaks version [1x](https://github.com/symplely/coroutine/tree/1x), by **namespace** of *global* functions, moving all required  **CONSTANTS** to the dependence package. This version includes the new **Fiber** implementation, with no need for *PHP* [ext-fibers](https://wiki.php.net/rfc/fibers) extension, slated for **PHP 8.1**. All `ext-fibers` [tests](https://github.com/amphp/ext-fiber/tree/master/tests), and [examples](https://github.com/amphp/ext-fiber/tree/master/examples) as they have them, has been implemented here in [examples/fiber](https://github.com/symplely/coroutine/tree/master/examples/fiber/), [tests/fiber](https://github.com/symplely/coroutine/tree/master/tests/fiber/) and [tests/FiberTest.php](https://github.com/symplely/coroutine/blob/master/tests/FiberTest.php).
 
 For maximum performance it's advisable to install the cross-platform [libuv](https://github.com/libuv/libuv) library, the PHP extension [ext-uv](https://github.com/amphp/ext-uv). See the online [book](https://nikhilm.github.io/uvbook/index.html) for a full tutorial overview of it's usage.
 
@@ -36,11 +36,11 @@ The **ext-parallel** `events` and `sync` API are not implemented, don't see a us
 
 ## Introduction
 
-__What is Async?__
+**What is Async?**
 Simply avoiding the blocking of the very next instruction. The mechanism of *capturing* and *running later*.
 
-__What issues the current PHP implementations this package address?__
-*Ease of use*. [Amp](#[Amp]) and [ReactPHP](#[ReactPHP]) both do and get you asynchronous results. But both require more setup by the *__user/developer__* to get a simple line of code to run. There is also **Swoole** and **Hhvm**, but neither are standard PHP installations.
+**What issues the current PHP implementations this package address?**
+*Ease of use*. [Amp](#[Amp]) and [ReactPHP](#[ReactPHP]) both do and get you asynchronous results. But both require more setup by the ***user/developer*** to get a simple line of code to run. There is also **Swoole** and **Hhvm**, but neither are standard PHP installations.
 
 When using **Amp** or **ReactPHP** and some of the packages based upon them, you must not only manage the `Callbacks` you provided, but also the returned `Promise` object, and the `Event Loop` object. These libraries modeling themselves around old school **Javascript**, where `Javascript` nowadays moving towards simple `async/await` syntax. Which brings up this question.
 
@@ -55,7 +55,7 @@ When using they return the actual results you want, no meddling with any objects
 
 The thing about each, is the history leading to the feature, the actual behavior, the underlying concepts are the same, and a simple calling structure statement. They all reference in various ways the use of `yield` or `iterators`, which this package relies upon and makes the following true.
 
-The only thing you will do to **make** your code `asynchronous`, is **placing** `yield` _within_, and **prefix** _calling_ your **code** with `yield` to **get** _actual_ `results` you want.
+The only thing you will do to **make** your code `asynchronous`, is **placing** `yield` *within*, and **prefix** *calling* your **code** with `yield` to **get** *actual* `results` you want.
 
 With this package you will have a **PHP** version of `async/await`, by just using **`yield`**.
 
@@ -63,7 +63,7 @@ There are a few helper functions available to tie everything together. Mainly, `
 
 By using, it immediately returns a number, that can be used with `gather()`, another Python like [function](https://docs.python.org/3/library/asyncio-task.html#asyncio.gather), which also behaves like Google's [WaitGroup](https://golang.org/pkg/sync/#WaitGroup). This will wait and return the result of a code distant/**detached** for running in the `background`.
 
-This package follows a new paradigm [Behavioral Programming](http://www.wisdom.weizmann.ac.il/~bprogram/) with the concept of [B-threads](https://medium.com/@lmatteis/b-threads-programming-in-a-way-that-allows-for-easier-changes-5d95b9fb6928), _functional generators_.
+This package follows a new paradigm [Behavioral Programming](http://www.wisdom.weizmann.ac.il/~bprogram/) with the concept of [B-threads](https://medium.com/@lmatteis/b-threads-programming-in-a-way-that-allows-for-easier-changes-5d95b9fb6928), *functional generators*.
 
 The base overall usage of [Swoole Coroutine](https://www.swoole.co.uk/coroutine), and [FaceBook's Hhvm](https://docs.hhvm.com/hack/asynchronous-operations/introduction) **PHP** follows the same outline implementations as others and put forth here.
 
@@ -212,17 +212,17 @@ Try recreating this with the other pure *PHP* async implementations, they would 
 
 -------
 
-A [**Coroutine**](https://en.wikipedia.org/wiki/Coroutine) here are specially crafted functions that are based on __generators__, with the use of `yield` and `yield from`. When used, they **control context**, meaning `capture/release` an application's execution flow.
+A [**Coroutine**](https://en.wikipedia.org/wiki/Coroutine) here are specially crafted functions that are based on **generators**, with the use of `yield` and `yield from`. When used, they **control context**, meaning `capture/release` an application's execution flow.
 
 When `yield` is placed within an block of code, it indicates to the calling function, that an object will be returned instead, the code is not immediately executed.
 
-This package represent that calling function, an __scheduler__, similar to an **event loop**. A coroutine needs to be scheduled to run, and once scheduled coroutines are wrapped in an `Task`, which are a type of **Promise**.
+This package represent that calling function, an **scheduler**, similar to an **event loop**. A coroutine needs to be scheduled to run, and once scheduled coroutines are wrapped in an `Task`, which are a type of **Promise**.
 
-A `task` is an object that represents some work to be done, potentially with a result at the end of it. These tasks are _registered_ with a scheduler that is responsible for running them.
+A `task` is an object that represents some work to be done, potentially with a result at the end of it. These tasks are *registered* with a scheduler that is responsible for running them.
 
-Due to the __single-threaded__ nature of PHP (without extensions anyway), we cannot think of a `task` as doing a single __long-running__ calculation - this will __block__ the single thread until the task is finished.
+Due to the **single-threaded** nature of PHP (without extensions anyway), we cannot think of a `task` as doing a single **long-running** calculation - this will **block** the single thread until the task is finished.
 
-Instead, `tasks` must perform work in small chunks/iterations __('ticks')__ where possible, passing control back to the scheduler at appropriate points. This is known as [__cooperative multi-tasking__](https://en.wikipedia.org/wiki/Cooperative_multitasking) (so called because the tasks must cooperate by yielding control voluntarily).
+Instead, `tasks` must perform work in small chunks/iterations **('ticks')** where possible, passing control back to the scheduler at appropriate points. This is known as [**cooperative multi-tasking**](https://en.wikipedia.org/wiki/Cooperative_multitasking) (so called because the tasks must cooperate by yielding control voluntarily).
 
 The scheduler is responsible for 'ticking' the scheduled tasks, with each scheduled task being repeatedly 'ticked' until it is complete. It is up to the scheduler implementation how to do this in a way that allows all scheduled tasks to run.
 
@@ -236,7 +236,7 @@ The task is cancelled by calling cancel()
 
 When using this package, and the code you are working on contain `yield` points, these define points is where a *context switch* can happen if other tasks are pending, but will not if no other task is pending. This can also be seen as **breakpoints/traps**, like when using an debugger, when triggered, the debugger steps in, an you can view state and step thought the remainder of your code.
 
-> A *context switch* represents the __scheduler__ yielding the flow of control from one *coroutine* to the next.
+> A *context switch* represents the **scheduler** yielding the flow of control from one *coroutine* to the next.
 
 > A *coroutine* here is define as an function/method containing the `yield` keyword, in which will return *generator* object.
 
@@ -284,7 +284,7 @@ This package should be seen/used as an **user-land** extension, it's usage of `y
 
 ## Functions
 
-Only the functions located here and in the [Core.php](https://github.com/symplely/coroutine/blob/master/Core.php) file should be used. Direct access to object class libraries is discouraged, the names might change, or altogether drop if not listed here. Third party library package [development](#Development) is the exception.
+Only the functions located here and in the [Core.php](https://github.com/symplely/coroutine/blob/master/Core.php) file should be used. Direct access to object class libraries is discouraged, the names might change, or altogether drop if not listed here. Third party library package [development](#development) is the exception.
 
 The functions for **Network** related in [Stream.php](https://github.com/symplely/coroutine/blob/master/Stream.php), **File System** in [Path.php](https://github.com/symplely/coroutine/blob/master/Path.php), and **Processes** in [Worker.php](https://github.com/symplely/coroutine/blob/master/Worker.php), all have been namespaced, so use as follows:
 
@@ -592,7 +592,7 @@ For **Windows** there is good news, native *async* thru `libuv` has arrived.
 
 Windows builds for stable PHP versions are available [from PECL](https://pecl.php.net/package/uv).
 
-Directly download latest from https://windows.php.net/downloads/pecl/releases/uv/0.2.4/
+Directly download latest from <https://windows.php.net/downloads/pecl/releases/uv/0.2.4/>
 
 Extract `libuv.dll` to sample directory as `PHP` binary executable, and extract `php_uv.dll` to `ext\` directory.
 
@@ -611,7 +611,7 @@ echo extension=php_sockets.dll >> php.ini
 echo extension=php_uv.dll >> php.ini
 ```
 
-> Note: Seems there are issues with __PHP ZTS__ on both *Windows* and *Linux* when using `uv_spawn`.
+> Note: Seems there are issues with **PHP ZTS** on both *Windows* and *Linux* when using `uv_spawn`.
 
 ## Usage
 
@@ -766,7 +766,7 @@ yield \some_name($whatever, ...$args);
 
  **Nikita Popov** [Cooperative multitasking using coroutines (in PHP!)](https://nikic.github.io/2012/12/22/Cooperative-multitasking-using-coroutines-in-PHP.html). Which this package **forks** [Ditaio](https://github.com/nikic/ditaio), restructuring/rewriting.
 
-**Parallel** class is a restructured/rewrite of [spatie/async](https://github.com/spatie/async). The **Parallel** class rely upon [symplely/spawn](https://github.com/symplely/spawn) as a dependency, used for **subprocess** management/execution, it uses **`uv_spawn`** of **libuv** for launching processes. The **Spawn** package has [opis/closure](https://github.com/opis/closure) as an dependency, used to overcome **PHP** serialization limitations, and [symfony/process](https://github.com/symfony/process) as a fallback to **`proc_open`** for launching processes, in case **libuv** the _PHP_-**UV** extension is not installed.
+**Parallel** class is a restructured/rewrite of [spatie/async](https://github.com/spatie/async). The **Parallel** class rely upon [symplely/spawn](https://github.com/symplely/spawn) as a dependency, used for **subprocess** management/execution, it uses **`uv_spawn`** of **libuv** for launching processes. The **Spawn** package has [opis/closure](https://github.com/opis/closure) as an dependency, used to overcome **PHP** serialization limitations, and [symfony/process](https://github.com/symfony/process) as a fallback to **`proc_open`** for launching processes, in case **libuv** the *PHP*-**UV** extension is not installed.
 
 ## Contributing
 
